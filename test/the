@@ -1,0 +1,115 @@
+#!/bin/bash
+set +e
+set -u
+mkdir -p test/logs
+exec &> >(tee $(date +"test/logs/%Y%m%d.%H%M%S.log"))
+
+ok=yes
+check() {
+  rc=$?
+  if [[ $rc != 0 ]]; then
+    echo "++ FAILED: rc was $rc, not 0!"
+    ok=no
+  fi
+}
+
+export TWEED_URL=${TWEED_URL:-http://127.0.0.1:5000}
+export TWEED_USERNAME=${TWEED_USERNAME:-tweed}
+export TWEED_PASSWORD=${TWEED_PASSWORD:-tweed}
+
+export PATH=$PWD:$PATH
+chmod 0755 test/sets/*
+
+echo; echo "++ CATALOG: tweed catalog"; echo
+./tweed catalog
+
+if [[ -z "${1:-}" ]]; then
+  set -- all
+fi
+for plan in $(cd test/sets; for x in "$@"; do ./$x; done | sort | uniq); do
+  echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+  echo "++ $plan"
+  echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+  echo
+
+  echo; echo "++ PREFLIGHT: tweed check $plan"; echo
+  ./tweed check $plan
+  check
+
+  id=i$(uuidgen | tr A-Z a-z | cut -d - -f2,3,4)
+  echo; echo "++ PROVISIONING: tweed provision $plan --as $id"; echo
+  ./tweed provision $plan --as $id
+  check
+
+  echo; echo "++ BINDING: tweed bind $id"; echo
+  ./tweed bind $id
+  check
+
+  echo; echo "++ CHECKING: tweed bindings $id"; echo
+  ./tweed bindings $id
+  check
+
+  bid=$(./tweed bindings $id --json | jq -r '.bindings | keys | .[0]')
+  echo; echo "++ CHECKING: tweed binding $id/$bid"; echo
+  ./tweed binding $id/$bid
+  check
+
+  tester=$(./tweed bindings $id --json | jq -r '.bindings[].test')
+  echo; echo "++ TESTING: $tester"; echo
+  /bin/sh -c "$tester"
+  check
+
+  echo; echo "++ UNBINDING: tweed unbind $id/$bid"; echo
+  ./tweed unbind $id/$bid
+  check
+
+  echo; echo "++ DEPROVISIONING: tweed deprovision $id"; echo
+  ./tweed deprovision $id
+  check
+
+  echo; echo "++ INFO: tweed instance $id"; echo
+  ./tweed instance $id
+  check
+
+  echo; echo "++ LOG: tweed log $id"; echo
+  ./tweed log $id
+  check
+
+  echo; echo "++ PURGE: tweed purge $id"; echo
+  ./tweed purge $id
+  check
+
+  echo; echo; echo; echo; echo;
+done
+
+echo; echo "++ FINAL STATE: tweed ls"; echo
+./tweed ls
+
+if [[ $ok != "yes" ]]; then
+  cat <<EOF
+
+   ########    ###    #### ##       ######## ########
+   ##         ## ##    ##  ##       ##       ##     ##
+   ##        ##   ##   ##  ##       ##       ##     ##
+   ######   ##     ##  ##  ##       ######   ##     ##
+   ##       #########  ##  ##       ##       ##     ##
+   ##       ##     ##  ##  ##       ##       ##     ##
+   ##       ##     ## #### ######## ######## ########
+
+EOF
+  exit 1
+
+else
+  cat <<EOF
+
+    ######   ########  ########    ###    ########
+   ##    ##  ##     ## ##         ## ##      ##
+   ##        ##     ## ##        ##   ##     ##
+   ##   #### ########  ######   ##     ##    ##
+   ##    ##  ##   ##   ##       #########    ##
+   ##    ##  ##    ##  ##       ##     ##    ##
+    ######   ##     ## ######## ##     ##    ##
+
+EOF
+  exit 0
+fi

@@ -1,0 +1,17 @@
+#!/bin/bash
+set -eux
+
+uuid=$(uuidgen | tr A-Z a-z)
+
+./tweed provision dummy/noop --as $uuid
+./tweed bind $uuid --as $uuid-1
+(set +x
+echo
+echo
+./tweed instances
+echo
+echo)
+./tweed instance --log $uuid
+./tweed unbind $uuid/$uuid-1
+./tweed instance $uuid
+./tweed deprovision $uuid

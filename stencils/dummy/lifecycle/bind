@@ -1,0 +1,17 @@
+#!/bin/sh
+set -eu
+echo >&2 "binding..."
+
+n=4
+while [[ $n != '0' ]]; do
+  sleep 1
+  n=$(( n - 1 ))
+  echo >&2 "$n seconds left..."
+done
+
+cat <<EOF | spruce json
+credentials:
+  username: foo
+  password: bar
+EOF
+exit 0

@@ -1,0 +1,15 @@
+#!/bin/bash
+set -eu
+
+case $INFRASTRUCTURE_TYPE in
+kubernetes)
+  export KUBECONFIG=$INFRASTRUCTURE
+  kubectl get nodes
+  ;;
+
+bosh)
+  . $INFRASTRUCTURE
+  bosh env
+  ;;
+
+esac

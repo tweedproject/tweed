@@ -1,0 +1,110 @@
+#!/bin/bash
+set -eu
+
+echo
+echo "GENERATING CREDENTIALS"
+echo "======================"
+if ! safe exists $VAULT/root:username; then
+	echo ">> generating a new, random, postgres root username"
+	safe set $VAULT/root username=u$(uuidgen | tr A-Z a-z | cut -d - -f 1) >/dev/null
+fi
+if ! safe exists $VAULT/root:password; then
+	echo ">> generating a new, random, postgres root username"
+	safe set $VAULT/root password=s/$(uuidgen | tr A-Z a-z) >/dev/null
+fi
+
+if ! safe exists $VAULT/db:name; then
+	echo ">> setting the instance database name to 'pg1'"
+	safe set $VAULT/db name=pg1 >/dev/null
+fi
+
+USERNAME=$(safe read $VAULT/root:username)
+PASSWORD=$(safe read $VAULT/root:password)
+
+echo "root account is '$USERNAME'"
+echo
+echo
+
+case $INFRASTRUCTURE_TYPE in
+kubernetes)
+  export KUBECONFIG=$INFRASTRUCTURE
+  NS=$(spruce merge $INPUTS stencil.yml | spruce json | jq -r '.tweed.k8s.ns')
+
+  echo
+  echo "RENDERING RESOURCE TEMPLATES"
+  echo "============================"
+  mkdir -p out/
+  (for what in ns svc dep pvc; do
+   echo >&2 ">> rendering k8s/$what.yml ..."
+   echo '---'
+   spruce merge --prune tweed \
+     $INPUTS \
+     stencil.yml \
+     k8s/$what.yml
+   done) > out/spec.yml
+
+  echo
+  echo "kubernetes spec generated!"
+  echo ">> applying out/spec.yml via \`kubectl'..."
+  kubectl apply -f out/spec.yml
+  echo
+  echo ">> waiting for pods to become 'ready'..."
+  kubectl wait --timeout=2h -n $NS deployment/postgres --for condition=available
+  echo "done."
+  echo
+  kubectl -n $NS get all
+  echo
+  echo
+  NODES=$(kubectl get nodes -o json | jq -Mr '.items[].status.addresses[] | select(.type == "ExternalIP") | .address' | sort)
+  PORT=$(kubectl get -n $NS service/postgres -o jsonpath --template '{.spec.ports[0].nodePort}')
+  ;;
+
+bosh)
+  . $INFRASTRUCTURE
+  DEPLOYMENT=$(spruce merge $INPUTS stencil.yml | spruce json | jq -r '.tweed.bosh.deployment')
+  echo
+  echo "RENDERING BOSH MANIFESTS"
+  echo "========================"
+  mkdir -p out/
+  spruce merge --prune tweed \
+    $INPUTS \
+    stencil.yml \
+    bosh/deployment.yml > out/manifest.yml
+  echo "bosh deployment manifet generated!"
+  echo ">> deploying out/manifest.yml via \`bosh'..."
+  bosh -d $DEPLOYMENT delete-deployment -n >&2 || true
+  bosh -d $DEPLOYMENT deploy -n --no-redact out/manifest.yml >&2
+  NODES=$(bosh -d $DEPLOYMENT vms --json | jq -Mr '.Tables[0].Rows[].ips' | sort)
+  PORT=5432
+  ;;
+
+*)
+  echo >&2 "UNRECOGNIZED INFRASTRUCTURE TYPE '$INFRASTRUCTURE_TYPE'"
+  exit 1
+  ;;
+esac
+
+echo
+echo "VERIFYING POSTGRES FUNCTIONALITY"
+echo "================================"
+
+echo
+echo ">> checking the following postgres endpoints:"
+for node in $NODES; do
+	echo "     - $node:$PORT"
+done
+echo
+
+n=60
+while [[ $n -gt 0 ]]; do
+	for node in $NODES; do
+		PGPASSWORD=$PASSWORD psql -U $USERNAME -h $node -p $PORT -c 'SELECT 1' >/dev/null 2>&1 \
+			&& echo "postgres is up and running on $node:$PORT!" \
+			&& exit 0
+	done
+	n=$(( n - 1 ))
+	echo ">> trying again in 1s ($n attempts left)"
+	sleep 1
+done
+echo "!! failed to come up in 60s or less..."
+exit 1

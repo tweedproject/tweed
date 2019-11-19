@@ -1,0 +1,34 @@
+#!/bin/bash
+set -eu
+exec 2>> $WORKSPACE/log 1>&2
+trap 'echo "EXITING $?"' INT TERM QUIT EXIT
+cat >&2 <<EOF
+
+$(date) :: tweed
+------------------------------------------------------------------------------------------------------
+
+   ########  ######## ########  ########   #######  ##     ## ####  ######  ####  #######  ##    ##
+   ##     ## ##       ##     ## ##     ## ##     ## ##     ##  ##  ##    ##  ##  ##     ## ###   ##
+   ##     ## ##       ##     ## ##     ## ##     ## ##     ##  ##  ##        ##  ##     ## ####  ##
+   ##     ## ######   ########  ########  ##     ## ##     ##  ##   ######   ##  ##     ## ## ## ##
+   ##     ## ##       ##        ##   ##   ##     ##  ##   ##   ##        ##  ##  ##     ## ##  ####
+   ##     ## ##       ##        ##    ##  ##     ##   ## ##    ##  ##    ##  ##  ##     ## ##   ###
+   ########  ######## ##        ##     ##  #######     ###    ####  ######  ####  #######  ##    ##
+
+------------------------------------------------------------------------------------------------------
+
+EOF
+
+export INFRASTRUCTURE_TYPE=$(cat $INFRASTRUCTURE.type)
+echo >&2 "infrastructure: $INFRASTRUCTURE ($INFRASTRUCTURE_TYPE)"
+echo >&2 "stencil:        $STENCIL"
+echo >&2 "$WORKSPACE>"
+echo >&2
+
+cd $WORKSPACE
+mkdir -p lifecycle/data
+./lifecycle/deprovision
+echo gone > lifecycle/data/state
+echo >&2
+echo >&2 "DEPROVISION COMPLETE."
+exit 0

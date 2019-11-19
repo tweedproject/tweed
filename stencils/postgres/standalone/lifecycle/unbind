@@ -1,0 +1,59 @@
+#!/bin/bash
+set -eu
+
+USERNAME=$(safe get $VAULT/root:username)
+PASSWORD=$(safe get $VAULT/root:password)
+
+BOUND_USER=$(safe get $VAULT/users/$BINDING:username)
+echo >&2 ">> root user is '$USERNAME'"
+echo >&2 ">> bound user is '$BOUND_USER'"
+
+case $INFRASTRUCTURE_TYPE in
+kubernetes)
+  export KUBECONFIG=$INFRASTRUCTURE
+  NS=$(spruce merge $INPUTS stencil.yml | spruce json | jq -r '.tweed.k8s.ns')
+  kubectl get ns $NS >/dev/null
+  NODES=$(kubectl get nodes -o json | jq -Mr '.items[].status.addresses[] | select(.type == "ExternalIP") | .address' | sort)
+  PORT=$(kubectl get -n $NS service/postgres -o jsonpath --template '{.spec.ports[0].nodePort}')
+  ;;
+
+bosh)
+  . $INFRASTRUCTURE
+  DEPLOYMENT=$(spruce merge $INPUTS stencil.yml | spruce json | jq -r '.tweed.bosh.deployment')
+  bosh env >/dev/null
+  NODES=$(bosh -d $DEPLOYMENT vms --json | jq -Mr '.Tables[0].Rows[].addresses' | sort)
+  PORT=5432
+  ;;
+
+*)
+  echo >&2 "UNRECOGNIZED INFRASTRUCTURE TYPE '$INFRASTRUCTURE_TYPE'"
+  exit 1
+  ;;
+esac
+
+echo >&2
+echo >&2 "PROCESSING DROPS AGAINST POSTGRES"
+echo >&2 "================================="
+echo >&2
+echo >&2 ">> attempting to use the following postgres endpoints:"
+for node in $NODES; do
+	echo >&2 "     - $node:$PORT"
+done
+echo >&2
+
+set +e
+for node in $NODES; do
+	cat <<EOF | PGPASSWORD="$PASSWORD" psql -h $node -p $PORT -U $USERNAME >&2
+DROP DATABASE IF EXISTS $BOUND_USER;
+DROP USER     IF EXISTS $BOUND_USER;
+EOF
+	if [[ $? -eq 0 ]]; then
+		echo >&2 ">> dropped user $BOUND_USER, via $node:$PORT!"
+		safe rm -f $VAULT/users/$BINDING
+		exit 0
+	fi
+done
+set -e
+
+echo >&2 "!! unable to connect to postgres nodes."
+exit 1

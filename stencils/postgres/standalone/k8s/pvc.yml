@@ -1,0 +1,13 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres
+  namespace: (( grab tweed.k8s.ns ))
+  labels:    (( grab tweed.k8s.labels ))
+spec:
+  storageClassName: (( grab tweed.ops.storageClass || tweed.default.k8s.storageClass ))
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: (( grab tweed.user.disk || tweed.default.k8s.disk ))

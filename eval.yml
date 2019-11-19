@@ -1,0 +1,219 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tweed
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tweed
+  namespace: tweed
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tweed-broker
+  namespace: tweed
+rules:
+  - apiGroups: ["", "batch", "extensions", "apps"]
+    resources: ["*"]
+    verbs:     ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tweed
+  namespace: tweed
+subjects:
+  - kind: ServiceAccount
+    name: tweed
+    namespace: tweed
+roleRef:
+  kind: ClusterRole
+  name: tweed-broker
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name:      vault
+  namespace: tweed
+data:
+  local.json: |
+    {
+      "disable_mlock": 1,
+      "backend": {
+        "file": {
+          "path": "/vault/file"
+        }
+      },
+      "listener": {
+        "tcp": {
+          "address":     "0.0.0.0:8200",
+          "tls_disable": 1
+        },
+      },
+      "default_lease_ttl": "168h",
+      "max_lease_ttl": "720h"
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name:      tweed
+  namespace: tweed
+data:
+  tweed.yml: |
+    prefix: ''
+
+  catalog.yml: |
+    catalog:
+      services:
+        - name: PostgreSQL
+          id:   postgres
+          description: |
+            A standalone, single-node PostgreSQL RDBMS
+          metadata: {}
+          tags: [postgres, psql, pg, shared]
+          plans:
+            - name: v9
+              id:   v9
+              description: |
+                PostgreSQL version 9.x
+              tweed:
+                infrastructure: k8s
+                stencil:  postgres/standalone/k8s
+                limit:  2
+                config:
+                  version: '9'
+                credentials:
+                  version: 9
+                  tryit: (( concat "PGPASSWORD=" credentials.password " psql -h " credentials.host " -p " credentials.port " -U " credentials.username " " credentials.database ))
+
+            - name: v10
+              id:   v10
+              description: |
+                PostgreSQL version 10.x
+              tweed:
+                infrastructure: k8s
+                stencil:  postgres/standalone/k8s
+                limit: 1
+                config:
+                  version: '10'
+                credentials:
+                  version: 10
+                  tryit: (( concat "PGPASSWORD=" credentials.password " psql -h " credentials.host " -p " credentials.port " -U " credentials.username " " credentials.database ))
+
+            - name: v11
+              id:   v11
+              description: |
+                PostgreSQL version 11.x
+              tweed:
+                infrastructure: k8s
+                stencil:  postgres/standalone/k8s
+                limit: 1
+                config:
+                  version: '11'
+                credentials:
+                  version: 11
+                  tryit: (( concat "PGPASSWORD=" credentials.password " psql -h " credentials.host " -p " credentials.port " -U " credentials.username " " credentials.database ))
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:      tweed
+  namespace: tweed
+  labels:
+    app:     tweed
+    env:     eval
+    version: alpha
+
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app:     tweed
+      env:     eval
+      version: alpha
+  template:
+    metadata:
+      labels:
+        app:     tweed
+        env:     eval
+        version: alpha
+    spec:
+      serviceAccountName: tweed
+      containers:
+        - name:  vault
+          image: vault:latest
+          imagePullPolicy: Always
+          ports:
+            - name: tweed
+              containerPort: 80
+          env:
+            - name:  VAULT_API_ADDR
+              value: http://127.0.0.1:8200
+          command:
+            - vault
+            - server
+            - -config
+            - /vault/config/local.json
+
+          volumeMounts:
+            - name: vault
+              mountPath: /vault/config
+
+        - name:  broker
+          image: huntprod/tweed:latest
+          imagePullPolicy: Always
+          env:
+            - name:  INIT_VAULT
+              value: http://127.0.0.1:8200
+            - name:  USE_THIS_KUBERNETES
+              value: 'yes'
+            - name:  TWEED_LISTEN
+              value: ':80'
+            - name:  TWEED_HTTP_USERNAME
+              value: tweed
+            - name:  TWEED_USERNAME
+              value: tweed
+            - name:  TWEED_HTTP_PASSWORD
+              value: tweed
+            - name:  TWEED_PASSWORD
+              value: tweed
+            - name:  TWEED_URL
+              value: http://127.0.0.1:80
+
+          volumeMounts:
+            - name: tweed
+              mountPath: /tweed/etc/config.d/provided
+
+      volumes:
+        - name: tweed
+          configMap:
+            name: tweed
+        - name: vault
+          configMap:
+            name: vault
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tweed
+  namespace: tweed
+  labels:
+    app:     tweed
+    env:     eval
+    version: alpha
+spec:
+  type: NodePort
+  ports:
+    - name: tweed
+      port: 80
+      protocol: TCP
+      targetPort: tweed
+  selector:
+    app:     tweed
+    env:     eval
+    version: alpha

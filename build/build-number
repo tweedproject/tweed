@@ -1,0 +1,16 @@
+#!/bin/bash
+set -eu
+
+date=$(date +"%Y%m%d.%H%M%S")
+if [[ -z "${VERSION:-}" ]]; then
+  commit=$(git rev-list -n1 --abbrev-commit HEAD)
+  dirty=""
+  if git status --porcelain $(find . -name '*.go') | grep -q .; then
+    dirty="+"
+  fi
+  echo "${commit}${dirty}:${date}"
+  exit 0
+fi
+
+echo $date
+exit 0

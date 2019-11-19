@@ -1,0 +1,34 @@
+#!/bin/bash
+set -eu
+
+case $INFRASTRUCTURE_TYPE in
+kubernetes)
+  export KUBECONFIG=$INFRASTRUCTURE
+  NS=$(spruce merge $INPUTS stencil.yml | spruce json | jq -r '.tweed.k8s.ns')
+  kubectl get ns $NS >/dev/null
+
+  NODES_JSON=$(kubectl get nodes -o json | jq -Mc '[.items[].status.addresses[] | select(.type == "ExternalIP") | .address] | sort')
+  PORT=$(kubectl get -n $NS service/redis -o jsonpath --template '{.spec.ports[0].nodePort}')
+  ;;
+
+bosh)
+  . $INFRASTRUCTURE
+  DEPLOYMENT=$(spruce merge $INPUTS stencil.yml | spruce json | jq -r '.tweed.bosh.deployment')
+  bosh env >/dev/null
+
+  NODES_JSON=$(bosh -d $DEPLOYMENT vms --json | jq -Mc '[.Tables[0].Rows[].ips] | sort')
+  PORT=6379
+  ;;
+
+esac
+
+(cat <<EOF
+infra:
+  nodes: $NODES_JSON
+  port:  $PORT
+EOF
+) | spruce merge --cherry-pick credentials \
+  $INPUTS \
+  stencil.yml \
+  - \
+  credentials.yml

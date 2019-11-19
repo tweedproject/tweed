@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: (( grab tweed.k8s.ns ))
+  labels:    (( grab tweed.k8s.labels ))
+spec:
+  replicas: 1
+  selector:
+    matchLabels: (( grab tweed.k8s.labels ))
+  template:
+    metadata:
+      labels: (( grab tweed.k8s.labels ))
+    spec:
+      containers:
+        - name:  postgres
+          image: (( concat "postgres:" tweed.ops.version || tweed.default.version ))
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name:  POSTGRES_USER
+              value: (( vault tweed.vault "/root:username" ))
+            - name:  POSTGRES_PASSWORD
+              value: (( vault tweed.vault "/root:password" ))
+            - name:  PGDATA
+              value: /data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres

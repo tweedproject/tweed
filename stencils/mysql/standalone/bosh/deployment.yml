@@ -1,0 +1,56 @@
+---
+name: (( grab tweed.bosh.deployment ))
+
+tweed:
+  creds:
+    root:
+      username: (( vault tweed.vault "/root:username" ))
+      password: (( vault tweed.vault "/root:password" ))
+
+stemcells:
+  - alias:   default
+    os:      (( grab tweed.ops.stemcell_os      || tweed.default.bosh.stemcell_os ))
+    version: (( grab tweed.ops.stemcell_version || tweed.default.bosh.stemcell_version ))
+
+releases:
+  - name:    containers
+    version: latest
+
+update:
+  canaries:          1
+  max_in_flight:     1
+  serial:            true
+  canary_watch_time: 1000-120000
+  update_watch_time: 1000-120000
+
+instance_groups:
+  - name: mysql
+    instances: 1
+    azs: [z1]
+    vm_resources:
+      cpu: (( grab tweed.ops.cpu || tweed.default.bosh.cpu ))
+      ram: (( grab tweed.ops.ram || tweed.default.bosh.ram ))
+      ephemeral_disk_size: 8192
+    persistent_disk: (( grab tweed.ops.disk || tweed.default.bosh.disk ))
+    stemcell: default
+    networks: [{ name: (( grab tweed.ops.network || tweed.default.bosh.network )) }]
+
+    jobs:
+      - name:    docker
+        release: containers
+        properties:
+          recipe:
+            version: "2.1"
+            services:
+              mysql:
+                image: (( concat "mysql:" tweed.ops.version || tweed.default.version ))
+                environment:
+                  - (( concat "MYSQL_ROOT_PASSWORD=" tweed.creds.root.password ))
+                ports:
+                  - '3306:3306'
+                volumes:
+                  - /var/vcap/store/mysql/data:/var/lib/mysql
+                logging: &logging
+                  driver: json-file
+                  options:
+                    max-size: 100m

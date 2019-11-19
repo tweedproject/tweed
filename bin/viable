@@ -1,0 +1,8 @@
+#!/bin/bash
+set -eu
+exec 2>&1
+
+export INFRASTRUCTURE_TYPE=$(cat $INFRASTRUCTURE.type)
+cd $STENCIL
+./lifecycle/viable
+exit 0

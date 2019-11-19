@@ -1,0 +1,11 @@
+#!/bin/bash
+set -eu
+echo >&2 "unbinding..."
+
+n=5
+while [[ $n != '0' ]]; do
+  sleep 1
+  n=$(( n - 1 ))
+  echo >&2 "$n seconds left..."
+done
+exit 0

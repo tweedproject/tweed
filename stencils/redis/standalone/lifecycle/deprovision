@@ -1,0 +1,23 @@
+#!/bin/bash
+set -eu
+
+case $INFRASTRUCTURE_TYPE in
+kubernetes)
+  export KUBECONFIG=$INFRASTRUCTURE
+  NS=$(spruce merge $INPUTS stencil.yml | spruce json | jq -r '.tweed.k8s.ns')
+
+  echo >&2 ">> deleting kubernetes resources..."
+  kubectl delete ns $NS --wait=true
+  ;;
+
+bosh)
+  . $INFRASTRUCTURE
+  DEPLOYMENT=$(spruce merge $INPUTS stencil.yml | spruce json | jq -r '.tweed.bosh.deployment')
+
+  echo >&2 ">> deleting bosh deployment..."
+  bosh -d $DEPLOYMENT delete-deployment -n >&2
+  ;;
+esac
+
+echo >&2 ">> removing credentials from the vault..."
+safe rm -rf $VAULT

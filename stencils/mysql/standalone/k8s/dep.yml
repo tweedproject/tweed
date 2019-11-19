@@ -1,0 +1,31 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:      mysql
+  namespace: (( grab tweed.k8s.ns ))
+  labels:    (( grab tweed.k8s.labels ))
+spec:
+  replicas: 1
+  selector:
+    matchLabels: (( grab tweed.k8s.labels ))
+  template:
+    metadata:
+      labels: (( grab tweed.k8s.labels ))
+    spec:
+      containers:
+        - name:  mysql
+          image: (( concat "mysql:" tweed.ops.version || tweed.default.version ))
+          ports:
+            - name: mysql
+              containerPort: 3306
+          env:
+            - name:  MYSQL_ROOT_PASSWORD
+              value: (( vault tweed.vault "/root:password" ))
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: mysql

@@ -1,0 +1,5 @@
+#!/bin/bash
+while ! safe status | grep -q unsealed; do
+  sleep 1
+done
+exit 0

@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name:      mysql
+  namespace: (( concat tweed.prefix tweed.instance ))
+  labels:    (( grab tweed.k8s.labels ))
+spec:
+  type: NodePort
+  ports:
+    - name: mysql
+      port: 3306
+      protocol: TCP
+      targetPort: mysql
+  selector: (( grab tweed.k8s.labels ))

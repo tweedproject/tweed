@@ -1,0 +1,91 @@
+#!/bin/bash
+set -eu
+
+case $INFRASTRUCTURE_TYPE in
+kubernetes)
+  export KUBECONFIG=$INFRASTRUCTURE
+  NS=$(spruce merge $INPUTS stencil.yml | spruce json | jq -r '.tweed.k8s.ns')
+  kubectl get ns $NS >/dev/null
+  NODES_JSON=$(kubectl get nodes -o json | jq -Mc '[.items[].status.addresses[] | select(.type == "ExternalIP") | .address] | sort')
+  NODES=$(     kubectl get nodes -o json | jq -Mr  '.items[].status.addresses[] | select(.type == "ExternalIP") | .address' | sort)
+  PORT=$(kubectl get -n $NS service/postgres -o jsonpath --template '{.spec.ports[0].nodePort}')
+
+  ;;
+
+bosh)
+  . $INFRASTRUCTURE
+  DEPLOYMENT=$(spruce merge $INPUTS stencil.yml | spruce json | jq -r '.tweed.bosh.deployment')
+  bosh env >/dev/null
+  NODES_JSON=$(bosh -d $DEPLOYMENT vms --json | jq -Mr '[.Tables[0].Rows[].ips] | sort')
+  NODES=$(     bosh -d $DEPLOYMENT vms --json | jq -Mr  '.Tables[0].Rows[].ips' | sort)
+  PORT=5432
+  ;;
+
+*)
+  echo >&2 "UNRECOGNIZED INFRASTRUCTURE TYPE '$INFRASTRUCTURE_TYPE'"
+  exit 1
+  ;;
+esac
+
+USERNAME=$(safe get $VAULT/root:username)
+PASSWORD=$(safe get $VAULT/root:password)
+DATABASE=$(safe get $VAULT/db:name)
+
+echo >&2
+echo >&2 "GENERATING CREDENTIALS"
+echo >&2 "======================"
+BOUND_USER=u$(uuidgen | tr A-Z a-z | cut -d - -f 1)
+BOUND_PASS=s/$(uuidgen | tr A-Z a-z)
+export BOUND_USER
+echo >&2 ">> bound user is '$BOUND_USER'"
+echo >&2
+echo >&2
+
+safe set $VAULT/users/$BINDING \
+  username=$BOUND_USER \
+  password=$BOUND_PASS >/dev/null
+
+
+echo >&2
+echo >&2 "PROCESSING GRANTS AGAINST POSTGRES"
+echo >&2 "=================================="
+echo >&2
+echo >&2 ">> attempting to use the following postgres endpoints:"
+for node in $NODES; do
+	echo >&2 "     - $node:$PORT"
+done
+echo >&2
+
+ok=no
+set +e
+echo >&2 "trying nodes [$NODES]"
+for node in $NODES; do
+	cat <<EOF | PGPASSWORD="$PASSWORD" psql -h $node -p $PORT -U $USERNAME >&2
+SELECT 'CREATE DATABASE $DATABASE' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = '$DATABASE')\\gexec
+CREATE USER $BOUND_USER WITH ENCRYPTED PASSWORD '$BOUND_PASS' SUPERUSER;
+CREATE DATABASE $BOUND_USER;
+EOF
+	if [[ $? -eq 0 ]]; then
+		ok=yes
+		echo >&2 ">> created new user $BOUND_USER, via $node:$PORT!"
+		break;
+	fi
+done
+set -e
+
+if [[ $ok != "yes" ]]; then
+	echo >&2 "!! unable to connect to postgres nodes."
+	exit 1
+fi
+
+
+(cat <<EOF
+infra:
+  nodes: $NODES_JSON
+  port:  $PORT
+EOF
+) | spruce merge --cherry-pick credentials \
+  $INPUTS \
+  stencil.yml \
+  - \
+  credentials.yml

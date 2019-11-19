@@ -1,0 +1,2 @@
+#!/bin/sh
+tweed catalog --json | jq -r '.services[].plans[].tweed.reference' | grep '^redis'

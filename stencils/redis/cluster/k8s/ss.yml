@@ -1,0 +1,48 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name:      redis
+  namespace: (( grab tweed.k8s.ns ))
+  labels:    (( grab tweed.k8s.labels ))
+
+spec:
+  serviceName: redis
+  replicas: (( grab tweed.calculated.instances ))
+  selector:
+    matchLabels: (( grab tweed.k8s.labels ))
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: [ 'ReadWriteOnce' ]
+        resources:
+          requests:
+            storage: (( grab tweed.users.disk || tweed.ops.disk || tweed.default.k8s.disk ))
+  template:
+    metadata:
+      labels: (( grab tweed.k8s.labels ))
+    spec:
+      volumes:
+        - name: conf
+          configMap:
+            name:        redis
+            defaultMode: 0755
+
+      containers:
+        - name:  redis
+          image: (( concat "redis:" tweed.ops.version || tweed.default.version ))
+          ports:
+            - { name: redis,  containerPort:  6379 }
+            - { name: gossip, containerPort: 16379 }
+          command:
+            - /conf/boot.sh
+            - redis-server
+            - /conf/redis.conf
+            - --requirepass
+            - (( vault tweed.vault "/auth:password" ))
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: conf
+              mountPath: /conf

@@ -1,0 +1,26 @@
+#!/bin/sh
+set -eu
+
+(
+echo "files:"
+if [[ $INFRASTRUCTURE_TYPE = 'kubernetes' && -f out/spec.yml ]]; then
+  cat <<EOF
+  - filename: spec.yml
+    contents: (( file "out/spec.yml" ))
+    summary: Kubernetes Resource Spec
+    description: |
+      The Kubernetes Resource Spec that was applied to deploy this
+      service (complete with credentials, images and their tags, etc.)
+EOF
+fi
+
+if [[ $INFRASTRUCTURE_TYPE = 'bosh' && -f out/manifest.yml ]]; then
+  cat <<EOF
+  - filename: manifest.yml
+    contents: (( file "out/manifest.yml" ))
+    summary:  BOSH Manifest
+    description: |
+      The BOSH Deployment Manifest yaml that was used to deploy this
+      service (complete with credentials, OS version, etc.)
+EOF
+) | spruce merge

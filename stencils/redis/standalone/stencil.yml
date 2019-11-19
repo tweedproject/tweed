@@ -1,0 +1,34 @@
+tweed:
+  stencil:
+    name:    redis
+    version: 1.0.0
+
+  default:
+    version: '5'
+    bosh:
+      cpu:     2
+      ram:     1024
+      disk:    10_240
+      network: default
+
+      stemcell_os:      ubuntu-xenial
+      stemcell_version: latest
+
+    k8s:
+      disk:         4Gi
+      storageClass: ~      # use default
+
+  user: {}
+  ops:  {}
+
+  bosh:
+    deployment: (( concat tweed.prefix tweed.instance))
+
+  k8s:
+    ns: (( concat tweed.prefix tweed.instance))
+    labels:
+      k8s.tweedproject.io/instance:       (( grab tweed.instance ))
+      k8s.tweedproject.io/service:        (( grab tweed.service_id ))
+      k8s.tweedproject.io/plan:           (( grab tweed.plan_id ))
+      k8s.tweedproject.io/stencil.name:   (( grab tweed.stencil.name ))
+      k8s.tweedproject.io/stencil.verson: (( grab tweed.stencil.version ))

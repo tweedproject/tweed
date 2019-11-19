@@ -1,0 +1,17 @@
+github.com/gorilla/websocket v1.4.1 h1:q7AeDBpnBk8AogcD4DSag/Ukw/KV+YhzLj2bP5HvKCM=
+github.com/gorilla/websocket v1.4.1/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
+github.com/jhunt/go-ansi v0.0.0-20181127194324-5fd839f108b6 h1:qAlBkfBj+4aW68SdlhlAiWx+hy7vmchlcAZQRAJFhFI=
+github.com/jhunt/go-ansi v0.0.0-20181127194324-5fd839f108b6/go.mod h1:zx5sSmwzYAXhfPcRBU7SuiAwK+8vC/LTgAoHyJiclzI=
+github.com/jhunt/go-cli v0.0.0-20180120230054-44398e595118 h1:pJkfnav319gBFbol0av+PamHMB2BZ/zocxt6V2dH6+M=
+github.com/jhunt/go-cli v0.0.0-20180120230054-44398e595118/go.mod h1:4FMJrayGZOn7IjEvttdG3BYK1M9HuKvSNa04THRry0I=
+github.com/jhunt/go-envirotron v0.0.0-20191007155228-c8f2a184ad0f h1:C2Z+D/WhnixDp/q8+MoyqUlhZIAJvFhWwsGOjJqBG2s=
+github.com/jhunt/go-envirotron v0.0.0-20191007155228-c8f2a184ad0f/go.mod h1:QWmflKt1GHM1Vw7iSqF7CIlbcninGfyRjqjecXjchlU=
+github.com/jhunt/go-log v0.0.0-20171024033145-ddc1e3b8ed30 h1:uWIN5FcXeUrXtbR3plzgVsuw4k8L5r+Smi36N2RJ9LQ=
+github.com/jhunt/go-log v0.0.0-20171024033145-ddc1e3b8ed30/go.mod h1:z31eqIvUKnaxVg8+6/8AuJQVa7Fd5EzvOGJg1a88DPI=
+github.com/jhunt/go-snapshot v0.0.0-20171017043618-9ad8f5ee37a2 h1:mGjsfupyBHFg4Gk01Oxw3OHqiBLnIGYbLbaYWRebmgc=
+github.com/jhunt/go-snapshot v0.0.0-20171017043618-9ad8f5ee37a2/go.mod h1:oNu1YULLxQcu77xYyAN0Xb2YbEspiSwDSn9kPW2zRKU=
+github.com/jhunt/go-table v0.0.0-20181127210244-68a841ca53dc h1:znV4/dwO+LmbQGSet3aICGIGW99dX+dBPam50xj5d8o=
+github.com/jhunt/go-table v0.0.0-20181127210244-68a841ca53dc/go.mod h1:ws87Lzc/NsPhH1MRRNk2IBANVMHsaQws0NqstHrveaE=
+github.com/mattn/go-isatty v0.0.10 h1:qxFzApOv4WsAL965uUPIsXzAKCZxN2p9UqdhFS4ZW10=
+github.com/mattn/go-isatty v0.0.10/go.mod h1:qgIWMr58cqv1PHHyhnkY9lrL7etaEgOFcMEpPG5Rm84=
+golang.org/x/sys v0.0.0-20191008105621-543471e840be/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
