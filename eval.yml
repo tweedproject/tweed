@@ -83,7 +83,7 @@ data:
                 PostgreSQL version 9.x
               tweed:
                 infrastructure: k8s
-                stencil:  postgres/standalone/k8s
+                stencil:  postgres/standalone
                 limit:  2
                 config:
                   version: '9'
@@ -97,7 +97,7 @@ data:
                 PostgreSQL version 10.x
               tweed:
                 infrastructure: k8s
-                stencil:  postgres/standalone/k8s
+                stencil:  postgres/standalone
                 limit: 1
                 config:
                   version: '10'
@@ -111,8 +111,8 @@ data:
                 PostgreSQL version 11.x
               tweed:
                 infrastructure: k8s
-                stencil:  postgres/standalone/k8s
-                limit: 1
+                stencil:  postgres/standalone
+                limit: o1
                 config:
                   version: '11'
                 credentials:
