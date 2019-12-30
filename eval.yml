@@ -2,19 +2,19 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: tweed
+  name: ${NAMESPACE}
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: tweed
-  namespace: tweed
+  namespace: ${NAMESPACE}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: tweed-broker
-  namespace: tweed
+  namespace: ${NAMESPACE}
 rules:
   - apiGroups: ["", "batch", "extensions", "apps"]
     resources: ["*"]
@@ -24,11 +24,11 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
   name: tweed
-  namespace: tweed
+  namespace: ${NAMESPACE}
 subjects:
   - kind: ServiceAccount
     name: tweed
-    namespace: tweed
+    namespace: ${NAMESPACE}
 roleRef:
   kind: ClusterRole
   name: tweed-broker
@@ -38,7 +38,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name:      vault
-  namespace: tweed
+  namespace: ${NAMESPACE}
 data:
   local.json: |
     {
@@ -62,7 +62,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name:      tweed
-  namespace: tweed
+  namespace: ${NAMESPACE}
 data:
   tweed.yml: |
     prefix: ''
@@ -123,7 +123,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name:      tweed
-  namespace: tweed
+  namespace: ${NAMESPACE}
   labels:
     app:     tweed
     env:     eval
@@ -165,7 +165,7 @@ spec:
               mountPath: /vault/config
 
         - name:  broker
-          image: huntprod/tweed:latest
+          image: ${IMAGE}:${VERSION}
           imagePullPolicy: Always
           env:
             - name:  INIT_VAULT
@@ -201,7 +201,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: tweed
-  namespace: tweed
+  namespace: ${NAMESPACE}
   labels:
     app:     tweed
     env:     eval
