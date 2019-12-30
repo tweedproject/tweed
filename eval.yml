@@ -16,7 +16,7 @@ metadata:
   name: tweed-broker
   namespace: ${NAMESPACE}
 rules:
-  - apiGroups: ["", "batch", "extensions", "apps"]
+  - apiGroups: ["", "batch", "extensions", "apps", "autoscaling"]
     resources: ["*"]
     verbs:     ["*"]
 ---
