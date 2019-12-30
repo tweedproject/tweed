@@ -5,6 +5,8 @@ VERSION ?=
 BUILD   ?= $(shell ./build/build-number)
 LDFLAGS := -X main.Version="$(VERSION)" -X main.BuildNumber="$(BUILD)"
 
+.PHONY: test
+
 default:
 	go fmt . ./api ./cmd/tweed
 	go build -ldflags="$(LDFLAGS)" ./cmd/tweed
@@ -34,5 +36,4 @@ push: default
 	done
 
 test:
-	./test/the shared
-	./test/the dedicated
+	./test/the all
