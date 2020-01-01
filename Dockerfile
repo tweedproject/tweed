@@ -39,7 +39,6 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=stage2 /bins/* /usr/bin/
 COPY --from=stage1 /go/src/github.com/tweedproject/tweed/tweed /usr/bin
-COPY stencils /tweed/etc/stencils
 COPY bin      /tweed/bin
 
 ADD entrypoint.sh /usr/local/bin/entrypoint.sh
