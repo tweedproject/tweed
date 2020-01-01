@@ -67,6 +67,19 @@ data:
   tweed.yml: |
     prefix: ''
 
+  bundle.json: |
+    {
+      "name": "catalog",
+      "version": "0.1.1",
+      "schemaVersion": "v1.0.0-WD",
+      "invocationImages": [{
+        "imageType": "docker",
+        "image": "rkoster/mysql-tweed-stencil:latest"
+      }],
+      "parameters": {},
+      "actions": {}
+    }
+
   catalog.yml: |
     catalog:
       services:
@@ -112,7 +125,7 @@ data:
               tweed:
                 infrastructure: k8s
                 stencil:  postgres/standalone
-                limit: o1
+                limit: 1
                 config:
                   version: '11'
                 credentials:
@@ -148,9 +161,6 @@ spec:
         - name:  vault
           image: vault:latest
           imagePullPolicy: Always
-          ports:
-            - name: tweed
-              containerPort: 80
           env:
             - name:  VAULT_API_ADDR
               value: http://127.0.0.1:8200
@@ -164,9 +174,30 @@ spec:
             - name: vault
               mountPath: /vault/config
 
+        - name: registry
+          image: registry:latest
+          imagePullPolicy: Always
+          ports:
+            - name: registry
+              containerPort: 5000
+          command:
+          - /bin/registry
+          - serve
+          - /etc/docker/registry/config.yml
+          env:
+          - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
+            value: "/var/lib/registry"
+
         - name:  broker
           image: ${IMAGE}:${VERSION}
           imagePullPolicy: Always
+          ports:
+            - name: tweed
+              containerPort: 80
+          lifecycle:
+            postStart:
+              exec:
+                command: ["/usr/local/bin/post_start.sh"]
           env:
             - name:  INIT_VAULT
               value: http://127.0.0.1:8200
