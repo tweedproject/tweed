@@ -12,6 +12,7 @@ default:
 	go build -ldflags="$(LDFLAGS)" ./cmd/tweed
 
 docker:
+	go mod vendor
 	docker build -t $(IMAGE):edge .
 
 deploy:

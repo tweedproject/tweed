@@ -6,3 +6,4 @@
 /.svtoken
 /test/logs
 /.envrc
+/vendor

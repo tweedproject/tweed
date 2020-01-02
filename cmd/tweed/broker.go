@@ -1,9 +1,10 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"net/http"
 	"os"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/tweedproject/tweed"
 )
@@ -78,6 +79,13 @@ func Broker(args []string) {
 
 	if err := core.ValidateCatalog(); err != nil {
 		fmt.Fprintf(os.Stderr, "@R{(error)} failed to validate catalog:\n")
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Fprintf(os.Stderr, "loading catalog stencil images ...\n")
+	if err := core.LoadCatalogStencils(); err != nil {
+		fmt.Fprintf(os.Stderr, "@R{(error)} failed to load catalog stencils:\n")
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}

@@ -162,10 +162,6 @@ spec:
           ports:
             - name: tweed
               containerPort: 80
-          lifecycle:
-            postStart:
-              exec:
-                command: ["/usr/local/bin/post_start.sh"]
           env:
             - name:  INIT_VAULT
               value: http://127.0.0.1:8200
