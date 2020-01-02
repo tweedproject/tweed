@@ -25,7 +25,7 @@ func StencilExists(stencil string) (bool, error) {
 	ctx := context.Background()
 	numFilled, err := rc.Repositories(ctx, entries, stencil)
 	if err != io.EOF {
-		return false, fmt.Errorf("could stencil: %s in local registry: %s", stencil, err)
+		return false, fmt.Errorf("unable to find stencil: %s in local registry: %s", stencil, err)
 	}
 
 	if numFilled != 1 {
