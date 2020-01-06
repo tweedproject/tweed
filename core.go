@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+
+	"github.com/tweedproject/tweed/stencil"
 )
 
 type Core struct {
@@ -12,7 +14,8 @@ type Core struct {
 	HTTPAuthPassword string
 	HTTPAuthRealm    string
 
-	Config Config
+	Config         Config
+	StencilFactory *stencil.Factory
 
 	// FIXME track corrupted instances read at startup
 	instances map[string]*Instance

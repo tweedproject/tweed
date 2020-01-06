@@ -1,4 +1,4 @@
-package tweed
+package stencil
 
 import (
 	"context"
@@ -23,13 +23,9 @@ import (
 	"github.com/google/uuid"
 )
 
-func (c *Core) GetOrMakeStencilRootfs(stencil string) (string, error) {
+func (r *registry) loadStencilBundle(stencil string) (string, error) {
 	id := uuid.NewSHA1(uuid.Nil, []byte(stencil))
-	rootfsPath := path.Join(c.Root, stencilsSubDir, id.String())
-
-	if isNonEmptyDir(rootfsPath) {
-		return rootfsPath, nil
-	}
+	rootfsPath := path.Join(r.stencilsDir, id.String())
 
 	ctx := context.Background()
 	srcCtx := types.SystemContext{

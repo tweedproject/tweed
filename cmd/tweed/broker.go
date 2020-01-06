@@ -7,6 +7,7 @@ import (
 	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/tweedproject/tweed"
+	"github.com/tweedproject/tweed/stencil"
 )
 
 func Broker(args []string) {
@@ -33,11 +34,13 @@ func Broker(args []string) {
 		os.Exit(1)
 	}
 
+	stencilFactory := stencil.NewFactory(opts.Broker.Root)
 	core := tweed.Core{
 		Root:             opts.Broker.Root,
 		HTTPAuthUsername: opts.Broker.HTTPAuthUsername,
 		HTTPAuthPassword: opts.Broker.HTTPAuthPassword,
 		HTTPAuthRealm:    opts.Broker.HTTPAuthRealm,
+		StencilFactory:   stencilFactory,
 	}
 	if opts.Broker.ConfigJSON != "" {
 		opts.Broker.Config = "{{json literal from environment}}"
@@ -84,11 +87,7 @@ func Broker(args []string) {
 	}
 
 	fmt.Fprintf(os.Stderr, "loading catalog stencil images ...\n")
-	if err := core.LoadCatalogStencils(); err != nil {
-		fmt.Fprintf(os.Stderr, "@R{(error)} failed to load catalog stencils:\n")
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(1)
-	}
+	core.LoadCatalogStencils()
 
 	if err := core.Scan(); err != nil {
 		fmt.Fprintf(os.Stderr, "@R{(error)} failed to detect pre-existing service instances / bindings:\n")
