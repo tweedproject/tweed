@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"os"
 
@@ -34,7 +35,8 @@ func Broker(args []string) {
 		os.Exit(1)
 	}
 
-	stencilFactory := stencil.NewFactory(opts.Broker.Root)
+	logger := log.New(log.Writer(), "", log.LstdFlags)
+	stencilFactory := stencil.NewFactory(opts.Broker.Root, logger)
 	core := tweed.Core{
 		Root:             opts.Broker.Root,
 		HTTPAuthUsername: opts.Broker.HTTPAuthUsername,

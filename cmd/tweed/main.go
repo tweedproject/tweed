@@ -1,12 +1,15 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/jhunt/go-cli"
 	env "github.com/jhunt/go-envirotron"
 	"github.com/jhunt/go-log"
+
+	"github.com/tweedproject/tweed/stencil"
 )
 
 var (
@@ -92,6 +95,11 @@ func main() {
 	}
 	if opts.Version {
 		fmt.Printf("tweed %s %s\n", version("v"), build())
+		os.Exit(0)
+	}
+
+	if command == stencil.RuncInitCmd {
+		RuncInit(args)
 		os.Exit(0)
 	}
 

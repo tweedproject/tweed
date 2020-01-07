@@ -2,6 +2,7 @@ package stencil
 
 import (
 	"fmt"
+	"path"
 	"sync"
 )
 
@@ -61,4 +62,8 @@ func (s *Stencil) bundlePath() string {
 	s.bundle.cond.Wait()
 	s.bundle.cond.L.Unlock()
 	return s.bundle.path
+}
+
+func (s *Stencil) rootfsPath() string {
+	return path.Join(s.bundlePath(), "rootfs")
 }
