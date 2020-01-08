@@ -67,7 +67,7 @@ func (f *Factory) Get(ref string) (*Stencil, error) {
 			return s, nil
 		}
 	}
-	s := NewStencil(ref, f.registry)
+	s := NewStencil(ref, f.registry, f.runc)
 	f.stencils = append(f.stencils, s)
 	return s, nil
 }

@@ -11,9 +11,10 @@ type Stencil struct {
 	valid     *bool
 	bundle    bundle
 	registry  *registry
+	runc      *runc
 }
 
-func NewStencil(ref string, registry *registry) *Stencil {
+func NewStencil(ref string, registry *registry, runc *runc) *Stencil {
 	var once sync.Once
 	var m sync.Mutex
 	cond := sync.NewCond(&m)
@@ -26,6 +27,7 @@ func NewStencil(ref string, registry *registry) *Stencil {
 			cond: cond,
 		},
 		registry: registry,
+		runc:     runc,
 	}
 }
 

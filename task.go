@@ -1,9 +1,12 @@
 package tweed
 
 import (
+	"bufio"
 	"bytes"
+	"fmt"
 
 	"github.com/tweedproject/tweed/random"
+	"github.com/tweedproject/tweed/stencil"
 )
 
 type task struct {
@@ -36,31 +39,21 @@ func (t *task) Stderr() string {
 	return t.stderr.String()
 }
 
-func background(e Exec, fn func()) *task {
-	e.Stdout = make(chan string, 0)
-	e.Stderr = make(chan string, 0)
-	e.Done = make(chan int, 1)
-
+func background(e stencil.Exec, fn func()) *task {
 	t := &task{id: random.ID("t")}
+	e.Stdout = bufio.NewWriter(&t.stdout)
+	errWriter := bufio.NewWriter(&t.stderr)
+	e.Stderr = errWriter
+
 	go func() {
-		for s := range e.Stdout {
-			t.stdout.Write([]byte(s))
+		state, err := e.Eval()
+		if err != nil {
+			errWriter.WriteString(fmt.Sprintf("---\nERROR: %s\n", err))
 		}
-	}()
-	go func() {
-		for s := range e.Stderr {
-			t.stderr.Write([]byte(s))
-		}
-	}()
-	go func() {
-		for rc := range e.Done {
-			t.exited = true
-			t.rc = rc
-		}
+		t.exited = state.Exited
+		t.rc = state.ExitCode
 		t.done = true
 		fn()
 	}()
-
-	go e.run()
 	return t
 }

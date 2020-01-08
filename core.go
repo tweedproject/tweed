@@ -49,7 +49,7 @@ func (c *Core) Scan() error {
 				continue
 			}
 
-			inst, err := ParseInstance(c.Config.Catalog, c.Root, b)
+			inst, err := ParseInstance(c.Config.Catalog, c.StencilFactory, c.Root, b)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "found corrupted service instance '%s' -- unable to parse %s/instance.mf: %s\n", id, id, err)
 				continue

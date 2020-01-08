@@ -38,7 +38,7 @@ func (c *Core) ValidateCatalog() error {
 
 			if p.Tweed.Stencil == "" {
 				errors = append(errors, fmt.Errorf("service '%s' / '%s' does not specify a stencil", s.Name, p.Name))
-			} else if exists, err := stencil.ValidateStencilReference(p.Tweed.Stencil); exists {
+			} else if exists, err := stencil.ValidateStencilReference(p.Tweed.Stencil); !exists {
 				errors = append(errors, fmt.Errorf("service '%s' / '%s' specifies unknown stencil: %s", s.Name, p.Name, p.Tweed.Stencil), err)
 			}
 		}

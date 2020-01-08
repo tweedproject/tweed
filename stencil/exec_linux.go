@@ -11,12 +11,7 @@ import (
 	"github.com/opencontainers/runc/libcontainer/specconv"
 )
 
-func (f *Factory) Run(stencilRef string, a RunArg) error {
-	s, err := f.Get(stencilRef)
-	if err != nil {
-		return err
-	}
-
+func (e *Exec) Eval() (*ProcessState, error) {
 	spec := specconv.Example()
 	specconv.ToRootless(spec)
 
@@ -29,30 +24,53 @@ func (f *Factory) Run(stencilRef string, a RunArg) error {
 		RootlessCgroups: true,
 	})
 	if err != nil {
-		return fmt.Errorf("failed to create libcontainer config: %s", err)
+		return nil, fmt.Errorf("failed to create libcontainer config: %s", err)
 	}
 
-	conf.Rootfs = s.rootfsPath()
+	conf.Rootfs = e.Stencil.rootfsPath()
 	conf.Readonlyfs = true
-	conf.Mounts = []*configs.Mount{{
-		Source:      a.Store,
-		Destination: "/workspace",
-	}}
 
-	c, err := f.runc.factory.Create(id.String(), conf)
-	if err != nil {
-		return fmt.Errorf("failed to create runc container: %s", err)
+	e.Mounts = append(e.Mounts, "/etc/resolv.conf")
+	for _, mount := range e.Mounts {
+		conf.Mounts = append(conf.Mounts, &configs.Mount{
+			Source:      mount,
+			Destination: mount,
+		})
 	}
 
-	err = c.Run(&libcontainer.Process{
-		Args:   []string{a.Run},
-		Env:    a.Env,
-		Stdout: a.Stdout,
-		Stderr: a.Stderr,
+	conf.Networks = []*configs.Network{
+		{
+			Type:    "loopback",
+			Address: "127.0.0.1/0",
+			Gateway: "localhost",
+		},
+	}
+
+	c, err := e.Stencil.runc.factory.Create(id.String(), conf)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create runc container: %s", err)
+	}
+	defer c.Destroy()
+
+	p := libcontainer.Process{
+		Args:   []string{e.Run},
+		Env:    e.Env,
+		Stdout: e.Stdout,
+		Stderr: e.Stderr,
 		Init:   true,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to run script in stencil container: %s", err)
 	}
-	return nil
+	err = c.Run(&p)
+	if err != nil {
+		return nil, fmt.Errorf("failed to run script in stencil container: %s", err)
+	}
+
+	state, err := p.Wait()
+	if err != nil {
+		return nil, fmt.Errorf("failed while waiting on script running in stencil container: %s", err)
+	}
+
+	return &ProcessState{
+		ExitCode: state.ExitCode(),
+		Exited:   state.Exited(),
+	}, nil
 }

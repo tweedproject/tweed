@@ -159,6 +159,8 @@ spec:
         - name:  broker
           image: ${IMAGE}:${VERSION}
           imagePullPolicy: Always
+          securityContext:
+            privileged: true
           ports:
             - name: tweed
               containerPort: 80

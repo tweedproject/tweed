@@ -4,6 +4,6 @@ import (
 	"errors"
 )
 
-func (f *Factory) Run(stencilRef string, a RunArg) error {
-	return errors.New("runc is not supported on macOS")
+func (e *Exec) Eval() (*ProcessState, error) {
+	return nil, errors.New("runc is not supported on macOS")
 }

@@ -18,7 +18,7 @@ type registry struct {
 }
 
 func ValidateStencilReference(stencil string) (bool, error) {
-	rc, err := client.NewRegistry(localRegistry, http.DefaultTransport)
+	rc, err := client.NewRegistry(fmt.Sprintf("http://%s", localRegistry), http.DefaultTransport)
 	if err != nil {
 		return false, fmt.Errorf("failed to connect to local registry: %s", err)
 	}
@@ -30,8 +30,8 @@ func ValidateStencilReference(stencil string) (bool, error) {
 		return false, fmt.Errorf("unable to find stencil: %s in local registry: %s", stencil, err)
 	}
 
-	if numFilled != 1 {
-		return false, fmt.Errorf("found more then 1 stencil for: %s in local registry: %s", stencil)
+	if numFilled > 1 {
+		return false, fmt.Errorf("found more then 1 stencil for: %s in local registry", stencil)
 	}
 	return true, nil
 }
