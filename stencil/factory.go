@@ -21,13 +21,13 @@ type Factory struct {
 
 // NewFactory setup a new Factory for managing Stencil bundles and executing
 // life-cycle hooks using RunC
-func NewFactory(root string, logger *log.Logger) *Factory {
+func NewFactory(root string, binPath string, logger *log.Logger) *Factory {
 	registry := registry{
 		stencilsDir: path.Join(root, stencilsSubDir),
 	}
 	stencils := make([]*Stencil, 0)
 
-	runc, err := newRunc(path.Join(root, stencilsRuncDir))
+	runc, err := newRunc(path.Join(root, stencilsRuncDir), binPath)
 	if err != nil {
 		logger.Panic(err)
 	}

@@ -19,10 +19,12 @@ require (
 	github.com/jhunt/go-table v0.0.0-20181127210244-68a841ca53dc
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/mrunalp/fileutils v0.0.0-20171103030105-7d4729fb3618 // indirect
+	github.com/onsi/ginkgo v1.10.1
+	github.com/onsi/gomega v1.7.0
 	github.com/openSUSE/umoci v0.4.5
 	github.com/opencontainers/image-spec v1.0.2-0.20190823105129-775207bd45b6
 	github.com/opencontainers/runc v1.0.0-rc9
-	github.com/opencontainers/runtime-spec v1.0.2-0.20190207185410-29686dbc5559 // indirect
+	github.com/opencontainers/runtime-spec v1.0.2-0.20190207185410-29686dbc5559
 	github.com/seccomp/libseccomp-golang v0.9.1 // indirect
 	github.com/vishvananda/netlink v1.0.0 // indirect
 	github.com/vishvananda/netns v0.0.0-20191106174202-0a2b9b5464df // indirect

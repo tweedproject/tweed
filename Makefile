@@ -4,6 +4,7 @@ NAMESPACE ?= tweed
 VERSION ?=
 BUILD   ?= $(shell ./build/build-number)
 LDFLAGS := -X main.Version="$(VERSION)" -X main.BuildNumber="$(BUILD)"
+PWD = $(shell pwd)
 
 .PHONY: test
 
@@ -38,3 +39,12 @@ push: default
 
 test:
 	./test/the all
+
+unit-container:
+	docker build -t tweed-unit -f Dockerfile.test .
+	go mod vendor
+	docker run --rm -it  --privileged \
+		--mount type=bind,source=$(PWD),target=/tweed,consistency=cached tweed-unit:latest
+
+unit-watch: default
+	ginkgo watch ./...

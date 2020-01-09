@@ -136,7 +136,7 @@ func (i *Instance) lookupBindings(id string) error {
 		for id, raw := range bindings {
 			s, ok := raw.(string)
 			if !ok {
-				return fmt.Errorf("binding %s/%s is not a string")
+				return fmt.Errorf("binding %s is not a string", id)
 			}
 			var v map[string]interface{}
 			if err := json.Unmarshal([]byte(s), &v); err != nil {

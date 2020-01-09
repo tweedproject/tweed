@@ -2,6 +2,6 @@ package stencil
 
 type runc int
 
-func newRunc(dir string) (*runc, error) {
+func newRunc(dir, ex string) (*runc, error) {
 	return nil, nil
 }

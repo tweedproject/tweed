@@ -16,15 +16,13 @@ type Stencil struct {
 
 func NewStencil(ref string, registry *registry, runc *runc) *Stencil {
 	var once sync.Once
-	var m sync.Mutex
-	cond := sync.NewCond(&m)
 	return &Stencil{
 		Reference: ref,
 		valid:     nil,
 		bundle: bundle{
-			path: "",
-			once: &once,
-			cond: cond,
+			path:  "",
+			once:  &once,
+			ready: make(chan interface{}),
 		},
 		registry: registry,
 		runc:     runc,
@@ -32,26 +30,21 @@ func NewStencil(ref string, registry *registry, runc *runc) *Stencil {
 }
 
 type bundle struct {
-	path    string
-	once    *sync.Once
-	cond    *sync.Cond
-	getPath chan string
-}
-
-func (s *Stencil) Valid() (bool, error) {
-	return false, nil
+	path  string
+	once  *sync.Once
+	ready chan interface{}
 }
 
 func (s *Stencil) loadBundle() {
 	go s.bundle.once.Do(func() {
-		s.bundle.cond.L.Lock()
-		rootfs, err := s.registry.loadStencilBundle(s.Reference)
+		fmt.Println("loading bundle")
+		bundle, err := s.registry.loadStencilBundle(s.Reference)
 		if err != nil {
 			panic(fmt.Errorf("failed to create stencil bundle :%s", err))
 		}
-		s.bundle.path = rootfs
-		s.bundle.cond.Broadcast()
-		s.bundle.cond.L.Unlock()
+		fmt.Println("bundle loaded")
+		s.bundle.path = bundle
+		close(s.bundle.ready)
 	})
 }
 
@@ -59,11 +52,12 @@ func (s *Stencil) bundlePath() string {
 	if s.bundle.path != "" {
 		return s.bundle.path
 	}
-	s.loadBundle()
-	s.bundle.cond.L.Lock()
-	s.bundle.cond.Wait()
-	s.bundle.cond.L.Unlock()
+	<-s.bundle.ready
 	return s.bundle.path
+}
+
+func (s *Stencil) bundleConfig() string {
+	return path.Join(s.bundlePath(), "config.json")
 }
 
 func (s *Stencil) rootfsPath() string {
