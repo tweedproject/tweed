@@ -36,13 +36,8 @@ func Broker(args []string) {
 	}
 
 	logger := log.New(log.Writer(), "", log.LstdFlags)
-	ex, err := os.Executable()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "@R{(error)} failed to get current executable path.\n")
-		os.Exit(1)
-	}
 
-	stencilFactory := stencil.NewFactory(opts.Broker.Root, ex, logger)
+	stencilFactory := stencil.NewFactory(opts.Broker.Root, logger)
 	core := tweed.Core{
 		Root:             opts.Broker.Root,
 		HTTPAuthUsername: opts.Broker.HTTPAuthUsername,

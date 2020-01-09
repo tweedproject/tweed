@@ -37,12 +37,10 @@ type bundle struct {
 
 func (s *Stencil) loadBundle() {
 	go s.bundle.once.Do(func() {
-		fmt.Println("loading bundle")
 		bundle, err := s.registry.loadStencilBundle(s.Reference)
 		if err != nil {
 			panic(fmt.Errorf("failed to create stencil bundle :%s", err))
 		}
-		fmt.Println("bundle loaded")
 		s.bundle.path = bundle
 		close(s.bundle.ready)
 	})
@@ -52,6 +50,7 @@ func (s *Stencil) bundlePath() string {
 	if s.bundle.path != "" {
 		return s.bundle.path
 	}
+	s.loadBundle()
 	<-s.bundle.ready
 	return s.bundle.path
 }

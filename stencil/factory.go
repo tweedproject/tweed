@@ -7,8 +7,9 @@ import (
 )
 
 const (
-	stencilsSubDir  = "run/stencils"
-	stencilsRuncDir = "run/runc"
+	stencilsSubDir     = "run/stencils"
+	stencilsRuncDir    = "run/runc"
+	stencilsBundlesDir = "run/bundles"
 )
 
 type Factory struct {
@@ -21,21 +22,13 @@ type Factory struct {
 
 // NewFactory setup a new Factory for managing Stencil bundles and executing
 // life-cycle hooks using RunC
-func NewFactory(root string, binPath string, logger *log.Logger) *Factory {
-	registry := registry{
-		stencilsDir: path.Join(root, stencilsSubDir),
-	}
-	stencils := make([]*Stencil, 0)
-
-	runc, err := newRunc(path.Join(root, stencilsRuncDir), binPath)
-	if err != nil {
-		logger.Panic(err)
-	}
-
+func NewFactory(root string, logger *log.Logger) *Factory {
 	return &Factory{
-		registry: &registry,
-		stencils: stencils,
-		runc:     runc,
+		registry: &registry{
+			stencilsDir: path.Join(root, stencilsSubDir),
+		},
+		stencils: make([]*Stencil, 0),
+		runc:     newRunc(root),
 		logger:   logger,
 	}
 }

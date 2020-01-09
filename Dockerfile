@@ -15,6 +15,7 @@ RUN apt-get update \
  && curl -Lo /bins/safe       https://github.com/starkandwayne/safe/releases/download/v1.4.1/safe-linux-amd64 \
  && curl -Lo /bins/spruce     https://github.com/geofffranks/spruce/releases/download/v1.23.0/spruce-linux-amd64 \
  && curl -Lo /bins/jq         https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64 \
+ && curl -Lo /bins/runc       https://github.com/opencontainers/runc/releases/download/v1.0.0-rc9/runc.amd64 \
  && chmod 0755 /bins/*
 
 RUN curl -Lo /bins/duffle     https://github.com/cnabio/duffle/releases/download/0.3.5-beta.1/duffle-linux-amd64 \

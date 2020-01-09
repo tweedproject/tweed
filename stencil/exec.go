@@ -13,7 +13,7 @@ type ProcessState struct {
 }
 
 type Exec struct {
-	Run     string
+	Args    []string
 	Env     []string
 	Stdout  io.Writer
 	Stderr  io.Writer
@@ -28,8 +28,8 @@ func Run(e Exec) ([]byte, error) {
 	e.Stderr = bufio.NewWriter(&stderr)
 	_, err := e.Eval()
 	if err != nil {
-		return []byte(fmt.Sprintf("--STDOUT--\n%s\n---STDERR--\n%s",
-			stdout.String(), stderr.String())), err
+		return []byte{}, fmt.Errorf("%s\nSTDERR: %s\nSTDOUT: %s",
+			err, stderr.String(), stdout.String())
 	}
 	return stdout.Bytes(), nil
 }

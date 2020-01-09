@@ -118,7 +118,7 @@ func (i *Instance) lookupBindings(id string) error {
 
 	b, err := stencil.Run(stencil.Exec{
 		Stencil: i.Stencil,
-		Run:     "/lifecycle/bindings",
+		Args:    []string{"/lifecycle/bindings"},
 		Env:     i.env([]string{"BINDING=" + id}),
 		Mounts:  i.mounts(),
 	})
@@ -169,7 +169,7 @@ func (i *Instance) do(cmd, begin, middle, end string) (*task, error) {
 	i.State = middle
 	t := background(stencil.Exec{
 		Stencil: i.Stencil,
-		Run:     cmd,
+		Args:    []string{cmd},
 		Env:     i.env(nil),
 		Mounts:  i.mounts(),
 	}, func() {
@@ -226,7 +226,7 @@ func (i *Instance) Bind(id string) (*task, error) {
 	i.State = "binding"
 	t := background(stencil.Exec{
 		Stencil: i.Stencil,
-		Run:     "lifecycle/bind",
+		Args:    []string{"lifecycle/bind"},
 		Env: i.env([]string{
 			"BINDING=" + id,
 			"OVERRIDES=" + i.CredentialOverrides(),
@@ -255,7 +255,7 @@ func (i *Instance) Unbind(id string) (*task, error) {
 	i.State = "unbinding"
 	t := background(stencil.Exec{
 		Stencil: i.Stencil,
-		Run:     "/lifecycle/unbind",
+		Args:    []string{"/lifecycle/unbind"},
 		Env:     i.env([]string{"BINDING=" + id}),
 		Mounts:  i.mounts(),
 	}, func() {
@@ -286,8 +286,9 @@ func (i *Instance) Purge() error {
 func (i *Instance) Viable() error {
 	out, err := stencil.Run(stencil.Exec{
 		Stencil: i.Stencil,
-		Run:     i.path("/lifecycle/viable"),
+		Args:    []string{i.path("lifecycle/viable")},
 		Env:     i.env(nil),
+		Mounts:  []string{i.path("etc/infrastructures/")},
 	})
 	if err != nil {
 		return fmt.Errorf("stencil viability check failed: %s\n%s", err, string(out))
@@ -312,7 +313,7 @@ func (i *Instance) CredentialOverrides() string {
 func (i *Instance) Files() ([]File, error) {
 	out, err := stencil.Run(stencil.Exec{
 		Stencil: i.Stencil,
-		Run:     "/lifecycle/files",
+		Args:    []string{"/lifecycle/files"},
 		Env:     i.env(nil),
 		Mounts:  i.mounts(),
 	})

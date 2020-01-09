@@ -50,8 +50,13 @@ func background(e stencil.Exec, fn func()) *task {
 		if err != nil {
 			errWriter.WriteString(fmt.Sprintf("---\nERROR: %s\n", err))
 		}
-		t.exited = state.Exited
-		t.rc = state.ExitCode
+		if state != nil {
+			t.exited = state.Exited
+			t.rc = state.ExitCode
+		} else {
+			t.exited = true
+			t.rc = 1
+		}
 		t.done = true
 		fn()
 	}()

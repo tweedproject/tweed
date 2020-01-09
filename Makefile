@@ -10,7 +10,7 @@ PWD = $(shell pwd)
 
 default:
 	go fmt . ./api ./cmd/tweed
-	go build -ldflags="$(LDFLAGS)" ./cmd/tweed
+	go build -mod=vendor -ldflags="$(LDFLAGS)" ./cmd/tweed
 
 docker:
 	go mod vendor
@@ -46,5 +46,5 @@ unit-container:
 	docker run --rm -it  --privileged \
 		--mount type=bind,source=$(PWD),target=/tweed,consistency=cached tweed-unit:latest
 
-unit-watch: default
+unit-watch:
 	ginkgo watch ./...

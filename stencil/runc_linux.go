@@ -1,24 +1,21 @@
 package stencil
 
 import (
-	"fmt"
+	"path"
 
-	"github.com/opencontainers/runc/libcontainer"
+	gorunc "github.com/containerd/go-runc"
 )
 
 type runc struct {
-	factory libcontainer.Factory
+	client  *gorunc.Runc
+	bundles string
 }
 
-func newRunc(dir, binPath string) (*runc, error) {
-	f, err := libcontainer.New(dir,
-		libcontainer.RootlessCgroupfs,
-		libcontainer.InitArgs(binPath, RuncInitCmd),
-	)
-
-	if err != nil {
-		return nil, fmt.Errorf("failed to initialize RunC: %s", err)
+func newRunc(root string) *runc {
+	return &runc{
+		bundles: path.Join(root, stencilsBundlesDir),
+		client: &gorunc.Runc{
+			Root: path.Join(root, stencilsRuncDir),
+		},
 	}
-
-	return &runc{factory: f}, nil
 }
