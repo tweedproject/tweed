@@ -23,8 +23,6 @@ var opts struct {
 		KeepErrors       int    `cli:"--keep-errors"       env:"TWEED_ERRORS"`
 	} `cli:"broker"`
 
-	RuncInit struct{} `cli:"runc-init"`
-
 	Username string `cli:"-u, --username"   env:"TWEED_USERNAME"`
 	Password string `cli:"-p, --password"   env:"TWEED_PASSWORD"`
 	Tweed    string `cli:"-T, --tweed"      env:"TWEED_URL"`
