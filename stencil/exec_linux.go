@@ -22,26 +22,52 @@ func (e *Exec) Eval() (*ProcessState, error) {
 
 	spec.Root.Path = e.Stencil.rootfsPath()
 
-	err := copyResolvConf(spec.Root.Path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to copy resolv.conf: %s", err)
-	}
-
-	for _, mount := range e.Mounts {
-		spec.Mounts = append(spec.Mounts, gospec.Mount{
-			Type:        "none",
-			Source:      mount,
-			Destination: mount,
-			Options:     []string{"rbind", "rw"},
-		})
-	}
-
 	id := uuid.New()
 
 	bundlePath := path.Join(e.Stencil.runc.bundles, id.String())
-	err = os.MkdirAll(bundlePath, os.ModePerm)
+	err := os.MkdirAll(bundlePath, os.ModePerm)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create runc bundle dir: %s", err)
+	}
+	defer os.RemoveAll(bundlePath)
+
+	tmpDir := path.Join(bundlePath, "tmp")
+	err = os.MkdirAll(tmpDir, os.ModePerm)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create container tmp dir: %s", err)
+	}
+
+	e.Mounts = append(e.Mounts, Mount{
+		Source:      tmpDir,
+		Destination: "/tmp",
+		Writable:    true,
+	})
+	e.Mounts = append(e.Mounts, Mount{
+		Source:      "/etc/resolv.conf",
+		Destination: "/etc/resolv.conf",
+		Writable:    false,
+	})
+	for _, mount := range e.Mounts {
+		opts := []string{"rbind"}
+		if mount.Writable {
+			opts = append(opts, "rw")
+		}
+		spec.Mounts = append(spec.Mounts, gospec.Mount{
+			Type:        "none",
+			Source:      mount.Source,
+			Destination: mount.Destination,
+			Options:     opts,
+		})
+	}
+
+	cwd := "/"
+	if e.Cwd != "" {
+		cwd = e.Cwd
+	}
+	spec.Process = &gospec.Process{
+		Args: e.Args,
+		Env:  e.Env,
+		Cwd:  cwd,
 	}
 
 	specConfig := path.Join(bundlePath, "config.json")
@@ -55,7 +81,7 @@ func (e *Exec) Eval() (*ProcessState, error) {
 	}
 
 	ctx := context.Background()
-	cpipe, err := gorunc.NewPipeIO(
+	pipe, err := gorunc.NewPipeIO(
 		os.Geteuid(),
 		os.Getgid(),
 		func(opt *gorunc.IOOption) {
@@ -68,80 +94,26 @@ func (e *Exec) Eval() (*ProcessState, error) {
 		return nil, fmt.Errorf("failed to setup runc io: %s", err)
 	}
 
-	csocket, err := gorunc.NewTempConsoleSocket()
-	if err != nil {
-		return nil, fmt.Errorf("failed to setup runc socket: %s", err)
+	if e.Stdout != nil {
+		go io.Copy(e.Stdout, pipe.Stdout())
+	}
+	if e.Stderr != nil {
+		go io.Copy(e.Stderr, pipe.Stderr())
 	}
 
-	resolv, err := os.Open("/etc/resolv.conf")
-	if err != nil {
-		return nil, fmt.Errorf("failed to open resolv.conf: %s", err)
-	}
-
-	err = e.Stencil.runc.client.Create(ctx, id.String(), bundlePath, &gorunc.CreateOpts{
-		IO:            cpipe,
-		ConsoleSocket: csocket,
-		ExtraFiles:    []*os.File{resolv},
+	code, err := e.Stencil.runc.client.Run(ctx, id.String(), bundlePath, &gorunc.CreateOpts{
+		IO: pipe,
 	})
 	if err != nil {
-		stderr, _ := ioutil.ReadAll(cpipe.Stderr())
-		stdout, _ := ioutil.ReadAll(cpipe.Stderr())
-		return nil, fmt.Errorf(
-			"failed to create runc container: %s\nSTDOUT: %s\nSTDERR: %s",
-			err, string(stdout), string(stderr))
-	}
-
-	epipe, err := gorunc.NewPipeIO(
-		os.Geteuid(),
-		os.Getgid(),
-		func(opt *gorunc.IOOption) {
-			opt.OpenStdin = false
-			opt.OpenStdin = true
-			opt.OpenStderr = true
-		},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to setup runc io: %s", err)
-	}
-
-	go io.Copy(e.Stdout, epipe.Stdout())
-	go io.Copy(e.Stderr, epipe.Stderr())
-
-	err = e.Stencil.runc.client.Exec(ctx, id.String(), gospec.Process{
-		Terminal: false,
-		Args:     e.Args,
-		Env:      e.Env,
-		Cwd:      "/",
-	}, &gorunc.ExecOpts{
-		IO: epipe,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to exec process in runc container: %s", err)
+		return &ProcessState{
+			Exited:   true,
+			ExitCode: code,
+		}, fmt.Errorf("failed to run lifecyle hook with runc: %s", err)
 	}
 
 	return &ProcessState{
-		ExitCode: 0,
+		ExitCode: code,
 		Exited:   true,
 	}, nil
 
-}
-
-func copyResolvConf(rootfs string) error {
-	in, err := os.Open("/etc/resolv.conf")
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	out, err := os.Create(path.Join(rootfs, "/etc/resolv.conf"))
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, in)
-	if err != nil {
-		return err
-	}
-	return out.Close()
 }

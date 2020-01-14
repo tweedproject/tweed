@@ -1,8 +1,10 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
+	"os"
 	"time"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/tweedproject/tweed/api"
 )
@@ -85,6 +87,12 @@ func await(c *client, p patience) bool {
 		return awaitfn(p, func() bool {
 			var out api.TaskResponse
 			c.GET("/b/instances/"+p.instance+"/tasks/"+p.task, &out)
+			if out.ExitCode != 0 {
+				p.printf("@r{task %s/%s failed:}\n%s\n",
+					p.instance, p.task, out.Stderr)
+				os.Exit(out.ExitCode)
+			}
+
 			return out.Done
 		})
 	}

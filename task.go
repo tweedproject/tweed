@@ -39,7 +39,7 @@ func (t *task) Stderr() string {
 	return t.stderr.String()
 }
 
-func background(e stencil.Exec, fn func()) *task {
+func background(e stencil.Exec, fn func(*task)) *task {
 	t := &task{id: random.ID("t")}
 	e.Stdout = bufio.NewWriter(&t.stdout)
 	errWriter := bufio.NewWriter(&t.stderr)
@@ -55,10 +55,10 @@ func background(e stencil.Exec, fn func()) *task {
 			t.rc = state.ExitCode
 		} else {
 			t.exited = true
-			t.rc = 1
+			t.rc = 0
 		}
 		t.done = true
-		fn()
+		fn(t)
 	}()
 	return t
 }

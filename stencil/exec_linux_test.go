@@ -1,6 +1,8 @@
 package stencil_test
 
 import (
+	"bufio"
+	"bytes"
 	"io/ioutil"
 	"log"
 	"net"
@@ -46,15 +48,22 @@ var _ = Describe("Exec", func() {
 
 	})
 
-	It("can run Exec in container", func() {
+	It("can eval Exec in container", func() {
 		stencil, err := factory.Get("curl:latest")
 		Expect(err).ToNot(HaveOccurred())
-		out, err := Run(Exec{
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+		exec := Exec{
 			Args:    []string{"/usr/bin/curl", "--version"},
 			Stencil: stencil,
-		})
+			Stdout:  bufio.NewWriter(&stdout),
+			Stderr:  bufio.NewWriter(&stderr),
+		}
+		state, err := exec.Eval()
 		Expect(err).ToNot(HaveOccurred())
-		Expect(string(out)).To(HavePrefix("curl"))
+		Expect(string(stderr.Bytes())).To(Equal(""))
+		Expect(state.ExitCode).To(Equal(0))
+		Expect(string(stdout.Bytes())).To(HavePrefix("curl"))
 	})
 
 	It("can reach google.com from container", func() {
@@ -70,6 +79,7 @@ var _ = Describe("Exec", func() {
 
 	It("can mount a directory into container", func() {
 		testMount, err := ioutil.TempDir("", "testmount")
+		defer os.RemoveAll(testMount)
 		Expect(err).ToNot(HaveOccurred())
 		testFile := path.Join(testMount, "foo")
 		f, err := os.Create(testFile)
@@ -83,10 +93,83 @@ var _ = Describe("Exec", func() {
 		out, err := Run(Exec{
 			Args:    []string{"/bin/cat", testFile},
 			Stencil: stencil,
-			Mounts:  []string{testMount},
+			Mounts: []Mount{{
+				Source:      testMount,
+				Destination: testMount,
+			}},
 		})
 		Expect(err).ToNot(HaveOccurred())
 		Expect(string(out)).To(HavePrefix("Hello World from mount"))
+	})
+
+	It("multiple processes can have conflicting mounts", func() {
+		testMount1, err := ioutil.TempDir("", "testmount1")
+		Expect(err).ToNot(HaveOccurred())
+		defer os.RemoveAll(testMount1)
+		testMount2, err := ioutil.TempDir("", "testmount2")
+		Expect(err).ToNot(HaveOccurred())
+		defer os.RemoveAll(testMount2)
+		stencil, err := factory.Get("curl:latest")
+		Expect(err).ToNot(HaveOccurred())
+		go Run(Exec{
+			Args:    []string{"/bin/sh", "-c", "echo 'test1' > /data/test"},
+			Stencil: stencil,
+			Mounts: []Mount{{
+				Source:      testMount1,
+				Destination: "/data",
+				Writable:    true,
+			}},
+		})
+		_, err = Run(Exec{
+			Args:    []string{"/bin/sh", "-c", "echo 'test2' > /data/test"},
+			Stencil: stencil,
+			Mounts: []Mount{{
+				Source:      testMount2,
+				Destination: "/data",
+				Writable:    true,
+			}},
+		})
+		Expect(err).ToNot(HaveOccurred())
+		out, err := Run(Exec{
+			Args:    []string{"/bin/sh", "-c", "cat /data1/test /data2/test"},
+			Stencil: stencil,
+			Mounts: []Mount{{
+				Source:      testMount1,
+				Destination: "/data1",
+				Writable:    true,
+			}, {
+				Source:      testMount2,
+				Destination: "/data2",
+				Writable:    true,
+			}},
+		})
+		Expect(err).ToNot(HaveOccurred())
+		Expect(string(out)).To(Equal("test1\ntest2\n"))
+	})
+
+	It("returns exit code of a exited process", func() {
+		stencil, err := factory.Get("curl:latest")
+		Expect(err).ToNot(HaveOccurred())
+		var stderr bytes.Buffer
+		exec := Exec{
+			Args:    []string{"/usr/bin/curl", "-I", "https://localhost:123"},
+			Stencil: stencil,
+			Stderr:  bufio.NewWriter(&stderr),
+		}
+		state, err := exec.Eval()
+		Expect(err).ToNot(HaveOccurred())
+		Expect(state.ExitCode).ToNot(Equal(0))
+		Expect(string(stderr.Bytes())).To(ContainSubstring("Connection refused"))
+	})
+
+	It("returns exit code of a exited process", func() {
+		stencil, err := factory.Get("curl:latest")
+		Expect(err).ToNot(HaveOccurred())
+		_, err = Run(Exec{
+			Args:    []string{"/usr/bin/curl", "-I", "https://localhost:123"},
+			Stencil: stencil,
+		})
+		Expect(err.Error()).To(ContainSubstring("Connection refused"))
 	})
 
 	AfterSuite(func() {

@@ -20,6 +20,7 @@ require (
 	github.com/jhunt/go-table v0.0.0-20181127210244-68a841ca53dc
 	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/mrunalp/fileutils v0.0.0-20171103030105-7d4729fb3618 // indirect
+	github.com/nsf/gocode v0.0.0-20190302080247-5bee97b48836 // indirect
 	github.com/onsi/ginkgo v1.10.1
 	github.com/onsi/gomega v1.7.0
 	github.com/openSUSE/umoci v0.4.5

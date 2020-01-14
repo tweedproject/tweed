@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/tweedproject/tweed/stencil"
@@ -41,15 +42,16 @@ type instancemf struct {
 	} `json:"tweed"`
 }
 
-func (i *Instance) path(rel string) string {
-	return fmt.Sprintf("%s/%s", i.Root, rel)
+func (i *Instance) path(rel ...string) string {
+	return path.Join(append([]string{i.Root}, rel...)...)
 }
 
 func (i *Instance) my(rel string) string {
-	if rel != "" {
-		rel = "/" + strings.TrimPrefix(rel, "/")
-	}
-	return i.path("data/instances/" + i.ID + rel)
+	return i.path("data", "instances", i.ID, rel)
+}
+
+func (i *Instance) stencilPath(rel ...string) string {
+	return path.Join(append([]string{"/stencil"}, rel...)...)
 }
 
 func (i *Instance) env(env []string) []string {
@@ -63,18 +65,28 @@ func (i *Instance) env(env []string) []string {
 	env = append(env, "LANG="+os.Getenv("LANG"))
 	env = append(env, "INFRASTRUCTURE="+i.path("etc/infrastructures/"+i.Plan.Tweed.Infrastructure))
 	env = append(env, "INFRASTRUCTURE_TYPE="+string(infra))
-	env = append(env, "STENCIL="+i.path("etc/stencils/"+i.Plan.Tweed.Stencil))
-	env = append(env, "WORKSPACE="+i.my(""))
+	env = append(env, "WORKSPACE=/workspace")
+	env = append(env, "STENCIL="+i.stencilPath(""))
 	env = append(env, "VAULT="+i.VaultPrefix+"/"+i.ID)
-	env = append(env, "INPUTS=instance.mf")
+	env = append(env, "INPUTS=/workspace/instance.mf")
 	return env
 }
 
-func (i *Instance) mounts() []string {
-	return []string{
-		i.my(""),
-		i.path("etc/infrastructures/"),
-	}
+func (i *Instance) mounts() []stencil.Mount {
+	return []stencil.Mount{{
+		Source:      i.my(""),
+		Destination: "/workspace",
+		Writable:    true,
+	}, {
+		Source:      i.path(".svtoken"),
+		Destination: i.path(".svtoken"),
+	}, {
+		Source:      i.path(".saferc"),
+		Destination: i.path(".saferc"),
+	}, {
+		Source:      i.path("etc/infrastructures/"),
+		Destination: i.path("etc/infrastructures/"),
+	}}
 }
 
 func ParseInstance(cat Catalog, fact *stencil.Factory, root string, b []byte) (Instance, error) {
@@ -116,11 +128,9 @@ func (i *Instance) lookupBindings(id string) error {
 		i.Bindings = make(map[string]map[string]interface{})
 	}
 
-	b, err := stencil.Run(stencil.Exec{
-		Stencil: i.Stencil,
-		Args:    []string{"/lifecycle/bindings"},
-		Env:     i.env([]string{"BINDING=" + id}),
-		Mounts:  i.mounts(),
+	b, err := run1(Exec{
+		Run: i.path("bin/bindings"),
+		Env: i.env([]string{"BINDING=" + id}),
 	})
 	if err != nil {
 		return err
@@ -148,6 +158,21 @@ func (i *Instance) lookupBindings(id string) error {
 	return nil
 }
 
+func (i *Instance) saveBinding(id string, credentials []byte) error {
+	_, err := run1(Exec{
+		Run: i.path("bin/bind"),
+		Env: i.env([]string{
+			"BINDING=" + id,
+			"CREDENTIALS='" + string(credentials) + "'",
+		}),
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (i *Instance) LookupBindings() error {
 	return i.lookupBindings("")
 }
@@ -169,10 +194,10 @@ func (i *Instance) do(cmd, begin, middle, end string) (*task, error) {
 	i.State = middle
 	t := background(stencil.Exec{
 		Stencil: i.Stencil,
-		Args:    []string{cmd},
+		Args:    []string{i.stencilPath(cmd)},
 		Env:     i.env(nil),
 		Mounts:  i.mounts(),
-	}, func() {
+	}, func(_ *task) {
 		fmt.Printf("updating state to '%s'\n", end)
 		i.State = end
 	})
@@ -226,14 +251,17 @@ func (i *Instance) Bind(id string) (*task, error) {
 	i.State = "binding"
 	t := background(stencil.Exec{
 		Stencil: i.Stencil,
-		Args:    []string{"lifecycle/bind"},
+		Args:    []string{i.stencilPath("lifecycle/bind")},
 		Env: i.env([]string{
 			"BINDING=" + id,
 			"OVERRIDES=" + i.CredentialOverrides(),
 		}),
 		Mounts: i.mounts(),
-	}, func() {
+	}, func(t *task) {
 		i.State = "quiet"
+		if err := i.saveBinding(id, t.stdout.Bytes()); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to save newly-created binding %s/%s: %s", i.ID, id, err)
+		}
 		if err := i.LookupBinding(id); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to look up newly-created binding %s/%s: %s", i.ID, id, err)
 		}
@@ -255,10 +283,10 @@ func (i *Instance) Unbind(id string) (*task, error) {
 	i.State = "unbinding"
 	t := background(stencil.Exec{
 		Stencil: i.Stencil,
-		Args:    []string{"/lifecycle/unbind"},
+		Args:    []string{i.stencilPath("/lifecycle/unbind")},
 		Env:     i.env([]string{"BINDING=" + id}),
 		Mounts:  i.mounts(),
-	}, func() {
+	}, func(_ *task) {
 		i.State = "quiet"
 		delete(i.Bindings, id)
 	})
@@ -286,9 +314,12 @@ func (i *Instance) Purge() error {
 func (i *Instance) Viable() error {
 	out, err := stencil.Run(stencil.Exec{
 		Stencil: i.Stencil,
-		Args:    []string{i.path("lifecycle/viable")},
+		Args:    []string{i.stencilPath("lifecycle/viable")},
 		Env:     i.env(nil),
-		Mounts:  []string{i.path("etc/infrastructures/")},
+		Mounts: []stencil.Mount{{
+			Source:      i.path("etc/infrastructures/"),
+			Destination: i.path("etc/infrastructures/"),
+		}},
 	})
 	if err != nil {
 		return fmt.Errorf("stencil viability check failed: %s\n%s", err, string(out))
@@ -313,7 +344,7 @@ func (i *Instance) CredentialOverrides() string {
 func (i *Instance) Files() ([]File, error) {
 	out, err := stencil.Run(stencil.Exec{
 		Stencil: i.Stencil,
-		Args:    []string{"/lifecycle/files"},
+		Args:    []string{i.stencilPath("/lifecycle/files")},
 		Env:     i.env(nil),
 		Mounts:  i.mounts(),
 	})

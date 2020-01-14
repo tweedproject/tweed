@@ -19,6 +19,11 @@ docker:
 deploy:
 	cat eval.yml | \
 	  IMAGE=$(IMAGE) \
+	  VERSION=$(VERSION) \
+	  NAMESPACE=$(NAMESPACE) \
+	  envsubst | kubectl delete -f -
+	cat eval.yml | \
+	  IMAGE=$(IMAGE) \
           VERSION=$(VERSION) \
 	  NAMESPACE=$(NAMESPACE) \
           envsubst | kubectl apply -f -

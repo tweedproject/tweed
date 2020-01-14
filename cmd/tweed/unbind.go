@@ -1,8 +1,9 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/tweedproject/tweed/api"
 )
@@ -31,6 +32,7 @@ func Unbind(args []string) {
 		if opts.Unbind.Wait {
 			await(c, patience{
 				instance: id,
+				task:     out.Ref,
 				until:    "unbinding",
 				negate:   true,
 				quiet:    opts.Quiet,

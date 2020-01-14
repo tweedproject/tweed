@@ -15,10 +15,17 @@ type ProcessState struct {
 type Exec struct {
 	Args    []string
 	Env     []string
+	Cwd     string
 	Stdout  io.Writer
 	Stderr  io.Writer
-	Mounts  []string
+	Mounts  []Mount
 	Stencil *Stencil
+}
+
+type Mount struct {
+	Source      string
+	Destination string
+	Writable    bool
 }
 
 func Run(e Exec) ([]byte, error) {
@@ -26,10 +33,12 @@ func Run(e Exec) ([]byte, error) {
 	var stderr bytes.Buffer
 	e.Stdout = bufio.NewWriter(&stdout)
 	e.Stderr = bufio.NewWriter(&stderr)
-	_, err := e.Eval()
+	state, err := e.Eval()
 	if err != nil {
-		return []byte{}, fmt.Errorf("%s\nSTDERR: %s\nSTDOUT: %s",
-			err, stderr.String(), stdout.String())
+		return nil, fmt.Errorf("failed to run procces: %s\n%s", err, stderr.Bytes())
+	}
+	if state.ExitCode != 0 {
+		return nil, fmt.Errorf("process exited with: %d\n%s", state.ExitCode, stderr.Bytes())
 	}
 	return stdout.Bytes(), nil
 }

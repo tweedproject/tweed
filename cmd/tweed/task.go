@@ -1,8 +1,9 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/tweedproject/tweed/api"
 )
@@ -21,7 +22,12 @@ func Task(args []string) {
 	}
 
 	var out api.TaskResponse
-	c.GET("/b/instances/"+id+"/tasks/"+tid, &out)
+	err := c.GET("/b/instances/"+id+"/tasks/"+tid, &out)
+
+	if err != nil {
+		fmt.Printf("failed: %s", err)
+		os.Exit(1)
+	}
 
 	if opts.JSON {
 		JSON(out)
