@@ -27,13 +27,6 @@ RUN apt-get update \
             libgpgme-dev libassuan-dev \
             ca-certificates -y # Needed by duffle to pull from docker hub \
             && rm -rf /var/lib/apt/lists/*
-              # uuid-runtime curl net-tools \
-              # postgresql \
-              # redis \
-              # mysql-client \
-              # rabbitmq-server \
-              # mongodb-clients \
-              # kafkacat \
 
 COPY --from=stage2 /bins/* /usr/bin/
 COPY --from=stage1 /go/src/github.com/tweedproject/tweed/tweed /usr/bin
