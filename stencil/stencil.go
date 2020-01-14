@@ -36,12 +36,15 @@ type bundle struct {
 }
 
 func (s *Stencil) loadBundle() {
+	// function below will only be called once per sencil
 	go s.bundle.once.Do(func() {
 		bundle, err := s.registry.loadStencilBundle(s.Reference)
 		if err != nil {
 			panic(fmt.Errorf("failed to create stencil bundle :%s", err))
 		}
 		s.bundle.path = bundle
+		// close the ready channel so all channel subscribers can go ahead
+		// and read the bundle path
 		close(s.bundle.ready)
 	})
 }
@@ -50,7 +53,9 @@ func (s *Stencil) bundlePath() string {
 	if s.bundle.path != "" {
 		return s.bundle.path
 	}
+	// this function is safe to call multiple times due to the internal usages of sync.Once
 	s.loadBundle()
+	// wait for the channel to be closed (signals bundle.path has been written)
 	<-s.bundle.ready
 	return s.bundle.path
 }
