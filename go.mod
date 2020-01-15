@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/apex/log v1.1.1
+	github.com/concourse/retryhttp v1.0.2
 	github.com/containerd/go-runc v0.0.0-20180907222934-5a6d9f37cfa3
 	github.com/containers/image/v5 v5.1.0
 	github.com/docker/distribution v2.7.1+incompatible
