@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path"
 	"strings"
+
+	"github.com/tweedproject/tweed/stencil"
 )
 
 type Instance struct {
@@ -16,6 +19,7 @@ type Instance struct {
 	Root        string
 	Prefix      string
 	VaultPrefix string
+	Stencil     *stencil.Stencil
 
 	UserParameters map[string]interface{}
 	Bindings       map[string]map[string]interface{}
@@ -38,30 +42,54 @@ type instancemf struct {
 	} `json:"tweed"`
 }
 
-func (i *Instance) path(rel string) string {
-	return fmt.Sprintf("%s/%s", i.Root, rel)
+func (i *Instance) path(rel ...string) string {
+	return path.Join(append([]string{i.Root}, rel...)...)
 }
 
 func (i *Instance) my(rel string) string {
-	if rel != "" {
-		rel = "/" + strings.TrimPrefix(rel, "/")
-	}
-	return i.path("data/instances/" + i.ID + rel)
+	return i.path("data", "instances", i.ID, rel)
+}
+
+func (i *Instance) stencilPath(rel ...string) string {
+	return path.Join(append([]string{"/stencil"}, rel...)...)
 }
 
 func (i *Instance) env(env []string) []string {
+	infra, err := ioutil.ReadFile(
+		i.path("etc/infrastructures/" + i.Plan.Tweed.Infrastructure + ".type"))
+	if err != nil {
+		panic(fmt.Errorf("failed to read infra type: %s", err))
+	}
 	env = append(env, "HOME="+i.path(""))
 	env = append(env, "PATH="+os.Getenv("PATH"))
 	env = append(env, "LANG="+os.Getenv("LANG"))
 	env = append(env, "INFRASTRUCTURE="+i.path("etc/infrastructures/"+i.Plan.Tweed.Infrastructure))
-	env = append(env, "STENCIL="+i.path("etc/stencils/"+i.Plan.Tweed.Stencil))
-	env = append(env, "WORKSPACE="+i.my(""))
+	env = append(env, "INFRASTRUCTURE_TYPE="+string(infra))
+	env = append(env, "WORKSPACE=/workspace")
+	env = append(env, "STENCIL="+i.stencilPath(""))
 	env = append(env, "VAULT="+i.VaultPrefix+"/"+i.ID)
-	env = append(env, "INPUTS=instance.mf")
+	env = append(env, "INPUTS=/workspace/instance.mf")
 	return env
 }
 
-func ParseInstance(cat Catalog, root string, b []byte) (Instance, error) {
+func (i *Instance) mounts() []stencil.Mount {
+	return []stencil.Mount{{
+		Source:      i.my(""),
+		Destination: "/workspace",
+		Writable:    true,
+	}, {
+		Source:      i.path(".svtoken"),
+		Destination: i.path(".svtoken"),
+	}, {
+		Source:      i.path(".saferc"),
+		Destination: i.path(".saferc"),
+	}, {
+		Source:      i.path("etc/infrastructures/"),
+		Destination: i.path("etc/infrastructures/"),
+	}}
+}
+
+func ParseInstance(cat Catalog, fact *stencil.Factory, root string, b []byte) (Instance, error) {
 	var in instancemf
 
 	err := json.Unmarshal(b, &in)
@@ -74,10 +102,16 @@ func ParseInstance(cat Catalog, root string, b []byte) (Instance, error) {
 		return Instance{}, err
 	}
 
+	s, err := fact.Get(p.Tweed.Stencil)
+	if err != nil {
+		return Instance{}, err
+	}
+
 	inst := Instance{
 		ID:             in.Tweed.Instance,
 		Root:           root,
 		Plan:           p,
+		Stencil:        s,
 		UserParameters: in.Tweed.User,
 		State:          "quiet",
 	}
@@ -112,7 +146,7 @@ func (i *Instance) lookupBindings(id string) error {
 		for id, raw := range bindings {
 			s, ok := raw.(string)
 			if !ok {
-				return fmt.Errorf("binding %s/%s is not a string")
+				return fmt.Errorf("binding %s is not a string", id)
 			}
 			var v map[string]interface{}
 			if err := json.Unmarshal([]byte(s), &v); err != nil {
@@ -121,6 +155,21 @@ func (i *Instance) lookupBindings(id string) error {
 			i.Bindings[id] = v
 		}
 	}
+	return nil
+}
+
+func (i *Instance) saveBinding(id string, credentials []byte) error {
+	_, err := run1(Exec{
+		Run: i.path("bin/bind"),
+		Env: i.env([]string{
+			"BINDING=" + id,
+			"CREDENTIALS='" + string(credentials) + "'",
+		}),
+	})
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -143,10 +192,12 @@ func (i *Instance) do(cmd, begin, middle, end string) (*task, error) {
 	}
 
 	i.State = middle
-	t := background(Exec{
-		Run: i.path(cmd),
-		Env: i.env(nil),
-	}, func() {
+	t := background(stencil.Exec{
+		Stencil: i.Stencil,
+		Args:    []string{i.stencilPath(cmd)},
+		Env:     i.env(nil),
+		Mounts:  i.mounts(),
+	}, func(_ *task) {
 		fmt.Printf("updating state to '%s'\n", end)
 		i.State = end
 	})
@@ -185,7 +236,7 @@ func (i *Instance) Provision() (*task, error) {
 		return nil, err
 	}
 
-	return i.do("bin/provision", "", "provisioning", "quiet")
+	return i.do("/lifecycle/provision", "", "provisioning", "quiet")
 }
 
 func (i *Instance) Bind(id string) (*task, error) {
@@ -198,14 +249,19 @@ func (i *Instance) Bind(id string) (*task, error) {
 	}
 
 	i.State = "binding"
-	t := background(Exec{
-		Run: i.path("bin/bind"),
+	t := background(stencil.Exec{
+		Stencil: i.Stencil,
+		Args:    []string{i.stencilPath("lifecycle/bind")},
 		Env: i.env([]string{
 			"BINDING=" + id,
 			"OVERRIDES=" + i.CredentialOverrides(),
 		}),
-	}, func() {
+		Mounts: i.mounts(),
+	}, func(t *task) {
 		i.State = "quiet"
+		if err := i.saveBinding(id, t.stdout.Bytes()); err != nil {
+			fmt.Fprintf(os.Stderr, "failed to save newly-created binding %s/%s: %s", i.ID, id, err)
+		}
 		if err := i.LookupBinding(id); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to look up newly-created binding %s/%s: %s", i.ID, id, err)
 		}
@@ -225,10 +281,12 @@ func (i *Instance) Unbind(id string) (*task, error) {
 	}
 
 	i.State = "unbinding"
-	t := background(Exec{
-		Run: i.path("bin/unbind"),
-		Env: i.env([]string{"BINDING=" + id}),
-	}, func() {
+	t := background(stencil.Exec{
+		Stencil: i.Stencil,
+		Args:    []string{i.stencilPath("/lifecycle/unbind")},
+		Env:     i.env([]string{"BINDING=" + id}),
+		Mounts:  i.mounts(),
+	}, func(_ *task) {
 		i.State = "quiet"
 		delete(i.Bindings, id)
 	})
@@ -242,7 +300,7 @@ func (i *Instance) Deprovision() (*task, error) {
 		return nil, err
 	}
 
-	return i.do("bin/deprovision", "quiet", "deprovisioning", "gone")
+	return i.do("/lifecycle/deprovision", "quiet", "deprovisioning", "gone")
 }
 
 func (i *Instance) Purge() error {
@@ -254,12 +312,17 @@ func (i *Instance) Purge() error {
 }
 
 func (i *Instance) Viable() error {
-	out, err := run1(Exec{
-		Run: i.path("bin/viable"),
-		Env: i.env(nil),
+	out, err := stencil.Run(stencil.Exec{
+		Stencil: i.Stencil,
+		Args:    []string{i.stencilPath("lifecycle/viable")},
+		Env:     i.env(nil),
+		Mounts: []stencil.Mount{{
+			Source:      i.path("etc/infrastructures/"),
+			Destination: i.path("etc/infrastructures/"),
+		}},
 	})
 	if err != nil {
-		return fmt.Errorf("stencil viability check failed: %s", string(out))
+		return fmt.Errorf("stencil viability check failed: %s\n%s", err, string(out))
 	}
 	return nil
 }
@@ -279,9 +342,11 @@ func (i *Instance) CredentialOverrides() string {
 }
 
 func (i *Instance) Files() ([]File, error) {
-	out, err := run1(Exec{
-		Run: i.path("bin/files"),
-		Env: i.env(nil),
+	out, err := stencil.Run(stencil.Exec{
+		Stencil: i.Stencil,
+		Args:    []string{i.stencilPath("/lifecycle/files")},
+		Env:     i.env(nil),
+		Mounts:  i.mounts(),
 	})
 	if err != nil {
 		return nil, err

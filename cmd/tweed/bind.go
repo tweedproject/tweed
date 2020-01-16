@@ -1,8 +1,9 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/tweedproject/tweed/api"
 	"github.com/tweedproject/tweed/random"
@@ -37,6 +38,7 @@ func Bind(args []string) {
 		if opts.Bind.Wait {
 			await(c, patience{
 				instance: id,
+				task:     out.Ref,
 				until:    "binding",
 				negate:   true,
 				quiet:    opts.Quiet,

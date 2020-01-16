@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+
+	"github.com/tweedproject/tweed/stencil"
 )
 
 type Core struct {
@@ -12,7 +14,8 @@ type Core struct {
 	HTTPAuthPassword string
 	HTTPAuthRealm    string
 
-	Config Config
+	Config         Config
+	StencilFactory *stencil.Factory
 
 	// FIXME track corrupted instances read at startup
 	instances map[string]*Instance
@@ -46,7 +49,7 @@ func (c *Core) Scan() error {
 				continue
 			}
 
-			inst, err := ParseInstance(c.Config.Catalog, c.Root, b)
+			inst, err := ParseInstance(c.Config.Catalog, c.StencilFactory, c.Root, b)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "found corrupted service instance '%s' -- unable to parse %s/instance.mf: %s\n", id, id, err)
 				continue

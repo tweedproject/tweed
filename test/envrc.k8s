@@ -1,5 +1,5 @@
 host=$(kubectl get nodes -o jsonpath='{.items[0].status.addresses[?(@.type=="ExternalIP")].address}')
-port=$(kubectl -n ${NAMESPACE} get service tweed -o jsonpath='{.spec.ports[0].nodePort}')
+port=$(kubectl -n ${NAMESPACE} get service tweed -o jsonpath='{.spec.ports[?(@.name=="tweed")].nodePort}')
 export TWEED_URL=http://${host}:${port}
 export TWEED_USERNAME=tweed
 export TWEED_PASSWORD=tweed

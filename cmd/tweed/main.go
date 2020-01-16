@@ -1,8 +1,9 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/jhunt/go-cli"
 	env "github.com/jhunt/go-envirotron"

@@ -20,3 +20,11 @@ func (c Catalog) FindPlan(service, plan string) (*Plan, error) {
 	}
 	return nil, fmt.Errorf("service/plan %s/%s not found", service, plan)
 }
+
+func (c *Core) LoadCatalogStencils() {
+	for _, s := range c.Config.Catalog.Services {
+		for _, p := range s.Plans {
+			c.StencilFactory.Load(p.Tweed.Stencil)
+		}
+	}
+}

@@ -168,12 +168,19 @@ func (c *Core) API() *route.Router {
 			return
 		}
 
+		s, err := c.StencilFactory.Get(plan.Tweed.Stencil)
+		if err != nil {
+			r.Fail(route.Bad(err, err.Error()))
+			return
+		}
+
 		inst := Instance{
 			ID:          "vi-ab-le",
 			Plan:        plan,
 			Root:        c.Root,
 			Prefix:      c.Config.Prefix,
 			VaultPrefix: c.Config.Vault.Prefix,
+			Stencil:     s,
 		}
 		if err := inst.Viable(); err != nil {
 			r.OK(api.ViabilityResponse{
@@ -204,6 +211,12 @@ func (c *Core) API() *route.Router {
 			return
 		}
 
+		s, err := c.StencilFactory.Get(plan.Tweed.Stencil)
+		if err != nil {
+			r.Fail(route.Bad(err, err.Error()))
+			return
+		}
+
 		ref, err := c.Provision(&Instance{
 			ID:             r.Args[1],
 			Plan:           plan,
@@ -211,6 +224,7 @@ func (c *Core) API() *route.Router {
 			Prefix:         c.Config.Prefix,
 			VaultPrefix:    c.Config.Vault.Prefix,
 			UserParameters: in.Params,
+			Stencil:        s,
 		})
 		if err != nil {
 			c.oopsie(r, "unable to provision a %s / %s service instance: %s", in.Service, in.Plan, err)

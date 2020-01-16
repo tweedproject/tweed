@@ -1,8 +1,9 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/tweedproject/tweed/api"
 )
@@ -41,6 +42,7 @@ func deprovision1(c *client, id string) int {
 		if opts.Deprovision.Wait {
 			await(c, patience{
 				instance: id,
+				task:     out.Ref,
 				until:    "gone",
 				quiet:    opts.Quiet,
 			})

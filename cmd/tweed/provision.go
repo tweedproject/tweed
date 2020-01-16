@@ -1,9 +1,10 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
 	"strings"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/tweedproject/tweed/api"
 	"github.com/tweedproject/tweed/random"
@@ -53,6 +54,7 @@ func Provision(args []string) {
 		if opts.Provision.Wait {
 			await(c, patience{
 				instance: id,
+				task:     out.Ref,
 				until:    "provisioning",
 				negate:   true,
 				quiet:    opts.Quiet,
