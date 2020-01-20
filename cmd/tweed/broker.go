@@ -21,12 +21,12 @@ type BrokerCommand struct {
 	Config     string `short:"c" long:"config"  env:"TWEED_CONFIG_FILE"`
 	ConfigJSON string `                         env:"TWEED_CONFIG"`
 
-	Listen           string `short:"L" long:"listen"        env:"TWEED_LISTEN"`
-	Root             string `short:"r" long:"root"          env:"TWEED_ROOT" required:"true"`
-	HTTPAuthUsername string `short:"U" long:"http-username" env:"TWEED_HTTP_USERNAME"`
-	HTTPAuthPassword string `short:"P" long:"http-password" env:"TWEED_HTTP_PASSWORD"`
-	HTTPAuthRealm    string `long:"http-realm"              env:"TWEED_HTTP_REALM"`
-	KeepErrors       int    `long:"keep-errors"             env:"TWEED_ERRORS"`
+	Listen           string `short:"L" long:"listen"        env:"TWEED_LISTEN"        default:":5000"`
+	Root             string `short:"r" long:"root"          env:"TWEED_ROOT"          required:"true"`
+	HTTPAuthUsername string `short:"U" long:"http-username" env:"TWEED_HTTP_USERNAME" default:"tweed"`
+	HTTPAuthPassword string `short:"P" long:"http-password" env:"TWEED_HTTP_PASSWORD" default:"tweed"`
+	HTTPAuthRealm    string `long:"http-realm"              env:"TWEED_HTTP_REALM"    default:"Tweed"`
+	KeepErrors       int    `long:"keep-errors"             env:"TWEED_ERRORS"        default:"1000"`
 
 	CredentialManagement creds.CredentialManagementConfig `group:"Credential Management"`
 	CredentialManagers   creds.Managers

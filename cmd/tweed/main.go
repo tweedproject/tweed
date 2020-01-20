@@ -10,6 +10,7 @@ import (
 var (
 	Version     string
 	BuildNumber string
+	Tweed       TweedCommand
 )
 
 func version(prefix string) string {
@@ -25,11 +26,15 @@ func build() string {
 }
 
 func main() {
-	var cmd TweedCommand
-	var parser = flags.NewParser(&cmd, flags.Default)
+	Tweed.Version = func() {
+		fmt.Printf("tweed %s %s\n", version(""), build())
+		os.Exit(0)
+	}
+
+	var parser = flags.NewParser(&Tweed, flags.Default)
 	parser.NamespaceDelimiter = "-"
 
-	cmd.Broker.WireDynamicFlags(parser.Command.Find("broker"))
+	Tweed.Broker.WireDynamicFlags(parser.Command.Find("broker"))
 
 	_, err := parser.Parse()
 	handleError(parser, err)
@@ -206,7 +211,6 @@ func main() {
 func handleError(helpParser *flags.Parser, err error) {
 	if err != nil {
 		if flagsErr, ok := err.(*flags.Error); ok && flagsErr.Type == flags.ErrHelp {
-			fmt.Println(err)
 			os.Exit(0)
 		} else {
 			fmt.Fprintf(os.Stderr, "error: %s\n", err)
