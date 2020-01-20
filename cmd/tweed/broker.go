@@ -9,9 +9,30 @@ import (
 
 	"github.com/tweedproject/tweed"
 	"github.com/tweedproject/tweed/stencil"
+
+	"github.com/jessevdk/go-flags"
+
+	"github.com/tweedproject/tweed/creds"
+	_ "github.com/tweedproject/tweed/creds/kubernetes"
+	_ "github.com/tweedproject/tweed/creds/vault"
 )
 
-func Broker(args []string) {
+type BrokerCommand struct {
+	Config     string `short:"c" long:"config"  env:"TWEED_CONFIG_FILE"`
+	ConfigJSON string `                         env:"TWEED_CONFIG"`
+
+	Listen           string `short:"L" long:"listen"        env:"TWEED_LISTEN"`
+	Root             string `short:"r" long:"root"          env:"TWEED_ROOT" required:"true"`
+	HTTPAuthUsername string `short:"U" long:"http-username" env:"TWEED_HTTP_USERNAME"`
+	HTTPAuthPassword string `short:"P" long:"http-password" env:"TWEED_HTTP_PASSWORD"`
+	HTTPAuthRealm    string `long:"http-realm"              env:"TWEED_HTTP_REALM"`
+	KeepErrors       int    `long:"keep-errors"             env:"TWEED_ERRORS"`
+
+	CredentialManagement creds.CredentialManagementConfig `group:"Credential Management"`
+	CredentialManagers   creds.Managers
+}
+
+func (b *BrokerCommand) Execute(args []string) error {
 	if len(args) != 0 {
 		fmt.Fprintf(os.Stderr, "ERROR: extra arguments found in invocation.\n")
 		fmt.Fprintf(os.Stderr, "tweed service broker SHUTTING DOWN.\n")
@@ -21,10 +42,6 @@ func Broker(args []string) {
 	ok := true
 	if opts.Broker.Listen == "" {
 		fmt.Fprintf(os.Stderr, "@R{(error)} No @R{--listen} flag given, and @W{$TWEED_LISTEN} not set.\n")
-		ok = false
-	}
-	if opts.Broker.Root == "" {
-		fmt.Fprintf(os.Stderr, "@R{(error)} No @R{--root} flag given, and @W{$TWEED_ROOT} not set.\n")
 		ok = false
 	}
 	if opts.Broker.Config == "" && opts.Broker.ConfigJSON == "" {
@@ -127,4 +144,32 @@ func Broker(args []string) {
 	fmt.Fprintf(os.Stderr, "tweed broker API spinning up...\n")
 	http.Handle("/b/", core.API())
 	http.ListenAndServe(opts.Broker.Listen, nil)
+
+	return nil
+}
+
+func (cmd *BrokerCommand) WireDynamicFlags(commandFlags *flags.Command) {
+	var credsGroup *flags.Group
+	groups := commandFlags.Groups()
+
+	for i := 0; i < len(groups); i++ {
+		group := groups[i]
+
+		if credsGroup == nil && group.ShortDescription == "Credential Management" {
+			credsGroup = group
+		}
+
+		groups = append(groups, group.Groups()...)
+	}
+
+	if credsGroup == nil {
+		panic("could not find Credential Management group for registering managers")
+	}
+
+	managerConfigs := make(creds.Managers)
+	for name, p := range creds.ManagerFactories() {
+		managerConfigs[name] = p.AddConfig(credsGroup)
+	}
+	cmd.CredentialManagers = managerConfigs
+
 }
