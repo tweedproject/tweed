@@ -1,24 +1,29 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
 	"strings"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/jhunt/go-table"
 
 	"github.com/tweedproject/tweed"
 )
 
-func Catalog(args []string) {
+type CatalogCommand struct {
+}
+
+func (cmd *CatalogCommand) Execute(args []string) error {
+	SetupLogging()
 	GonnaNeedATweed()
 	DontWantNoArgs(args)
 
-	c := Connect(opts.Tweed, opts.Username, opts.Password)
+	c := Connect(Tweed.Tweed, Tweed.Username, Tweed.Password)
 	var cat tweed.Catalog
 	c.GET("/b/catalog", &cat)
 
-	if opts.JSON {
+	if Tweed.JSON {
 		JSON(cat)
 		os.Exit(0)
 	}
@@ -52,4 +57,5 @@ func Catalog(args []string) {
 		}
 	}
 	tbl.Output(os.Stdout)
+	return nil
 }

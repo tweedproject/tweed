@@ -1,13 +1,15 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/tweedproject/tweed/api"
 )
 
 func Check(args []string) {
+	SetupLogging()
 	GonnaNeedATweed()
 	service, plan := GonnaNeedAServiceAndAPlan(args)
 

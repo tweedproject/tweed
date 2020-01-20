@@ -18,21 +18,23 @@ import (
 )
 
 type BrokerCommand struct {
-	Config     string `short:"c" long:"config"  env:"TWEED_CONFIG_FILE"`
-	ConfigJSON string `                         env:"TWEED_CONFIG"`
+	Config     string `short:"c" long:"config"  env:"TWEED_CONFIG_FILE" description:"Location of service config file"`
+	ConfigJSON string `long:"inline-config"     env:"TWEED_CONFIG" description:"Inline service config in JSON format"`
 
-	Listen           string `short:"L" long:"listen"        env:"TWEED_LISTEN"        default:":5000"`
-	Root             string `short:"r" long:"root"          env:"TWEED_ROOT"          required:"true"`
-	HTTPAuthUsername string `short:"U" long:"http-username" env:"TWEED_HTTP_USERNAME" default:"tweed"`
-	HTTPAuthPassword string `short:"P" long:"http-password" env:"TWEED_HTTP_PASSWORD" default:"tweed"`
-	HTTPAuthRealm    string `long:"http-realm"              env:"TWEED_HTTP_REALM"    default:"Tweed"`
+	Listen           string `short:"L" long:"listen"        env:"TWEED_LISTEN" description:"TCP port to listen on" default:":5000"`
+	Root             string `short:"r" long:"root"          env:"TWEED_ROOT"   description:"Location of root infrastructure config files" required:"true"`
+	HTTPAuthUsername string `short:"U" long:"http-username" env:"TWEED_HTTP_USERNAME" description:"Username to use for HTTP Basic Auth of the API" default:"tweed"`
+	HTTPAuthPassword string `short:"P" long:"http-password" env:"TWEED_HTTP_PASSWORD" description:"Password to use for HTTP Basic Auth of the API" default:"tweed"`
+	HTTPAuthRealm    string `long:"http-realm"              env:"TWEED_HTTP_REALM"    description:"Realm name to use for HTTP Basic Auth of the API" default:"Tweed"`
 	KeepErrors       int    `long:"keep-errors"             env:"TWEED_ERRORS"        default:"1000"`
 
 	CredentialManagement creds.CredentialManagementConfig `group:"Credential Management"`
 	CredentialManagers   creds.Managers
 }
 
-func (b *BrokerCommand) Execute(args []string) error {
+func (cmd *BrokerCommand) Execute(args []string) error {
+	SetupLogging()
+
 	if len(args) != 0 {
 		fmt.Fprintf(os.Stderr, "ERROR: extra arguments found in invocation.\n")
 		fmt.Fprintf(os.Stderr, "tweed service broker SHUTTING DOWN.\n")
@@ -40,11 +42,11 @@ func (b *BrokerCommand) Execute(args []string) error {
 	}
 
 	ok := true
-	if opts.Broker.Listen == "" {
+	if cmd.Listen == "" {
 		fmt.Fprintf(os.Stderr, "@R{(error)} No @R{--listen} flag given, and @W{$TWEED_LISTEN} not set.\n")
 		ok = false
 	}
-	if opts.Broker.Config == "" && opts.Broker.ConfigJSON == "" {
+	if cmd.Config == "" && cmd.ConfigJSON == "" {
 		fmt.Fprintf(os.Stderr, "@R{(error)} No @R{--config} flag given, and neither @W{$TWEED_CONFIG_FILE} nor @W{$TWEED_CONFIG} were set.\n")
 		ok = false
 	}
@@ -54,17 +56,17 @@ func (b *BrokerCommand) Execute(args []string) error {
 
 	logger := log.New(log.Writer(), "", log.LstdFlags)
 
-	stencilFactory := stencil.NewFactory(opts.Broker.Root, logger)
+	stencilFactory := stencil.NewFactory(cmd.Root, logger)
 	core := tweed.Core{
-		Root:             opts.Broker.Root,
-		HTTPAuthUsername: opts.Broker.HTTPAuthUsername,
-		HTTPAuthPassword: opts.Broker.HTTPAuthPassword,
-		HTTPAuthRealm:    opts.Broker.HTTPAuthRealm,
+		Root:             cmd.Root,
+		HTTPAuthUsername: cmd.HTTPAuthUsername,
+		HTTPAuthPassword: cmd.HTTPAuthPassword,
+		HTTPAuthRealm:    cmd.HTTPAuthRealm,
 		StencilFactory:   stencilFactory,
 	}
-	if opts.Broker.ConfigJSON != "" {
-		opts.Broker.Config = "{{json literal from environment}}"
-		c, err := tweed.ParseConfig([]byte(opts.Broker.ConfigJSON))
+	if cmd.ConfigJSON != "" {
+		cmd.Config = "{{json literal from environment}}"
+		c, err := tweed.ParseConfig([]byte(cmd.ConfigJSON))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "@R{(error)} config JSON (from @W{$TWEED_CONFIG}) was invalid:\n")
 			fmt.Fprintf(os.Stderr, "        @R{%s}\n", err)
@@ -73,9 +75,9 @@ func (b *BrokerCommand) Execute(args []string) error {
 		core.Config = c
 
 	} else {
-		c, err := tweed.ReadConfig(opts.Broker.Config)
+		c, err := tweed.ReadConfig(cmd.Config)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "@R{(error)} failed to read config from @Y{%s}:\n", opts.Broker.Config)
+			fmt.Fprintf(os.Stderr, "@R{(error)} failed to read config from @Y{%s}:\n", cmd.Config)
 			fmt.Fprintf(os.Stderr, "        @R{%s}\n", err)
 			os.Exit(1)
 		}
@@ -134,16 +136,16 @@ func (b *BrokerCommand) Execute(args []string) error {
     prefix  :: @C{%s}
     vault   :: @C{%s}
 
-`, opts.Broker.Config, opts.Broker.Root, opts.Broker.Listen, core.Config.Prefix, core.Config.Vault.Prefix)
+`, cmd.Config, cmd.Root, cmd.Listen, core.Config.Prefix, core.Config.Vault.Prefix)
 
 	fmt.Fprintf(os.Stderr, "waiting for vault to open up for business...\n")
 	core.WaitForVault()
 
-	core.KeepErrors(opts.Broker.KeepErrors)
+	core.KeepErrors(cmd.KeepErrors)
 
 	fmt.Fprintf(os.Stderr, "tweed broker API spinning up...\n")
 	http.Handle("/b/", core.API())
-	http.ListenAndServe(opts.Broker.Listen, nil)
+	http.ListenAndServe(cmd.Listen, nil)
 
 	return nil
 }

@@ -4,6 +4,8 @@ import (
 	"os"
 
 	fmt "github.com/jhunt/go-ansi"
+
+	"github.com/jhunt/go-log"
 )
 
 func bail(err error) {
@@ -11,6 +13,13 @@ func bail(err error) {
 		fmt.Fprintf(os.Stderr, "@R{(error)} %s\n", err)
 		os.Exit(2)
 	}
+}
+
+func SetupLogging() {
+	log.SetupLogging(log.LogConfig{
+		Type:  "console",
+		Level: Tweed.LogLevel,
+	})
 }
 
 func GonnaNeedATweed() {

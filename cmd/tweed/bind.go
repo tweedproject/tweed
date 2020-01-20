@@ -9,20 +9,29 @@ import (
 	"github.com/tweedproject/tweed/random"
 )
 
-func Bind(args []string) {
-	GonnaNeedATweed()
-	id := GonnaNeedAnInstance(args)
+type BindCommand struct {
+	ID     string `long:"as" optional:"yes" description:"use given binding id otherwise use random"`
+	NoWait bool   `long:"no-wait" description:"don't wait for the binding to be created"`
 
-	bid := opts.Bind.ID
+	Args struct {
+		ID string `positional-arg-name:"instance" required:"true"`
+	} `positional-args:"yes"`
+}
+
+func (cmd *BindCommand) Execute(args []string) {
+	SetupLogging()
+	GonnaNeedATweed()
+
+	bid := cmd.ID
 	if bid == "" {
 		bid = random.ID("b")
 	}
 
-	c := Connect(opts.Tweed, opts.Username, opts.Password)
+	c := Connect(Tweed.Tweed, Tweed.Username, Tweed.Password)
 	var out api.BindResponse
-	c.PUT("/b/instances/"+id+"/bindings/"+bid, nil, &out)
+	c.PUT("/b/instances/"+cmd.Args.ID+"/bindings/"+bid, nil, &out)
 
-	if opts.JSON {
+	if Tweed.JSON {
 		JSON(out)
 		if out.OK != "" {
 			os.Exit(1)
@@ -31,13 +40,13 @@ func Bind(args []string) {
 	}
 
 	if out.OK != "" {
-		if !opts.Quiet {
+		if !Tweed.Quiet {
 			fmt.Printf("@G{%s}\n", out.OK)
 		}
 
-		if opts.Bind.Wait {
+		if !cmd.NoWait {
 			await(c, patience{
-				instance: id,
+				instance: cmd.Args.ID,
 				task:     out.Ref,
 				until:    "binding",
 				negate:   true,
@@ -45,12 +54,12 @@ func Bind(args []string) {
 			})
 		}
 
-		if opts.Quiet {
+		if Tweed.Quiet {
 			fmt.Printf("%s\n", bid)
 		} else {
 			fmt.Printf("binding: @C{%s}\n\n", bid)
-			fmt.Printf("run @W{tweed instance %s} for more details.\n", id)
-			fmt.Printf("run @W{tweed bindings %s} to show all bound credentials.\n", id)
+			fmt.Printf("run @W{tweed instance %s} for more details.\n", cmd.Args.ID)
+			fmt.Printf("run @W{tweed bindings %s} to show all bound credentials.\n", cmd.Args.ID)
 		}
 	} else {
 		fmt.Printf("@R{%s}\n", out.Error)

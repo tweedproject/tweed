@@ -1,29 +1,43 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
+
+	fmt "github.com/jhunt/go-ansi"
 )
 
-func Wait(args []string) {
+type WaitCommand struct {
+	Instance bool   `short:"i" long:"instance" description:"wait for an instance"`
+	Task     bool   `short:"t" long:"task"     description:"wait for a task"`
+	State    string `short:"s" long:"state" default:"quiet" description:"expected state"`
+	Not      bool   `long:"not" description:"wait until out of given state"`
+	Sleep    int    `short:"S" long:"sleep" default:"2" description:"number of seconds to sleep"`
+	Max      int    `short:"m" long:"max" default:"150" description:"max number of tries for waiting on state"`
+	Args     struct {
+		InstanceOrTask []string `positional-arg-name:"instance or task" required:"true"`
+	} `positional-args:"yes"`
+}
+
+func (cmd *WaitCommand) Execute(args []string) error {
+	SetupLogging()
 	GonnaNeedATweed()
 
-	if !opts.Wait.Task && !opts.Wait.Instance {
+	if !cmd.Task && !cmd.Instance {
 		fmt.Fprintf(os.Stderr, "@R{(error)} either of @C{--instance} (@C{-i}) or @C{--task} (@C{-t}) are required!\n")
 		os.Exit(1)
 	}
-	if opts.Wait.Task && opts.Wait.Instance {
+	if cmd.Task && cmd.Instance {
 		fmt.Fprintf(os.Stderr, "@R{(error)} only one of @C{--instance} (@C{-i}) or @C{--task} (@C{-t}) is allowed!\n")
 		os.Exit(1)
 	}
-	if opts.Wait.Task && opts.Wait.State != "" {
-		fmt.Fprintf(os.Stderr, "@Y({warning)} the @Y{--state '%s'} argument is ignored in @C{--task} mode...\n", opts.Wait.State)
+	if cmd.Task && cmd.State != "" {
+		fmt.Fprintf(os.Stderr, "@Y({warning)} the @Y{--state '%s'} argument is ignored in @C{--task} mode...\n", cmd.State)
 	}
 
-	if opts.Wait.Instance && opts.Wait.State == "" {
-		opts.Wait.State = "quiet"
+	if cmd.Instance && cmd.State == "" {
+		cmd.State = "quiet"
 	}
-	switch opts.Wait.State {
+	switch cmd.State {
 	case "quiet":
 	case "provisioning":
 	case "binding":
@@ -44,15 +58,15 @@ func Wait(args []string) {
 		os.Exit(1)
 	}
 
-	if opts.Wait.Task {
-		id, tid := GonnaNeedAnInstanceAndATask(args)
-		c := Connect(opts.Tweed, opts.Username, opts.Password)
+	if cmd.Task {
+		id, tid := GonnaNeedAnInstanceAndATask(cmd.Args.InstanceOrTask)
+		c := Connect(Tweed.Tweed, Tweed.Username, Tweed.Password)
 		ok := await(c, patience{
 			instance: id,
 			task:     tid,
-			nap:      opts.Wait.Sleep,
-			max:      opts.Wait.Max,
-			quiet:    opts.Quiet,
+			nap:      cmd.Sleep,
+			max:      cmd.Max,
+			quiet:    Tweed.Quiet,
 		})
 		if ok {
 			os.Exit(0)
@@ -61,15 +75,15 @@ func Wait(args []string) {
 		}
 
 	} else {
-		id := GonnaNeedAnInstance(args)
-		c := Connect(opts.Tweed, opts.Username, opts.Password)
+		id := GonnaNeedAnInstance(cmd.Args.InstanceOrTask)
+		c := Connect(Tweed.Tweed, Tweed.Username, Tweed.Password)
 		ok := await(c, patience{
 			instance: id,
-			until:    opts.Wait.State,
-			negate:   opts.Wait.Not,
-			nap:      opts.Wait.Sleep,
-			max:      opts.Wait.Max,
-			quiet:    opts.Quiet,
+			until:    cmd.State,
+			negate:   cmd.Not,
+			nap:      cmd.Sleep,
+			max:      cmd.Max,
+			quiet:    Tweed.Quiet,
 		})
 		if ok {
 			os.Exit(0)
@@ -77,4 +91,5 @@ func Wait(args []string) {
 			os.Exit(5)
 		}
 	}
+	return nil
 }
