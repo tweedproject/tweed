@@ -10,17 +10,27 @@ import (
 	"github.com/tweedproject/tweed/random"
 )
 
-func Provision(args []string) {
-	GonnaNeedATweed()
-	service, plan := GonnaNeedAServiceAndAPlan(args)
+type ProvisionCommand struct {
+	ID     string   `long:"as" optional:"yes" description:"use given service id otherwise use random"`
+	NoWait bool     `long:"no-wait" description:"don't wait for the service to be created"`
+	Params []string `short:"P" optional:"yes" long:"params" description:"params passed to the service"`
+	Args   struct {
+		ServicePlan []string `positional-arg-name:"service/plan" required:"true"`
+	} `positional-args:"yes"`
+}
 
-	id := opts.Provision.ID
+func (cmd *ProvisionCommand) Execute(args []string) error {
+	SetupLogging()
+	GonnaNeedATweed()
+	service, plan := GonnaNeedAServiceAndAPlan(cmd.Args.ServicePlan)
+
+	id := cmd.ID
 	if id == "" {
 		id = random.ID("i")
 	}
 
 	params := make(map[string]interface{})
-	for _, p := range opts.Provision.Params {
+	for _, p := range cmd.Params {
 		kv := strings.SplitN(p, "=", 2)
 		if len(kv) == 1 {
 			params[kv[0]] = ""
@@ -34,11 +44,11 @@ func Provision(args []string) {
 		Params:  params,
 	}
 
-	c := Connect(opts.Tweed, opts.Username, opts.Password)
+	c := Connect(Tweed.Tweed, Tweed.Username, Tweed.Password)
 	var out api.ProvisionResponse
 	c.PUT("/b/instances/"+id, in, &out)
 
-	if opts.JSON {
+	if Tweed.JSON {
 		JSON(out)
 		if out.OK != "" {
 			os.Exit(1)
@@ -47,21 +57,21 @@ func Provision(args []string) {
 	}
 
 	if out.OK != "" {
-		if !opts.Quiet {
+		if !Tweed.Quiet {
 			fmt.Printf("@G{%s}\n", out.OK)
 		}
 
-		if opts.Provision.Wait {
+		if !cmd.NoWait {
 			await(c, patience{
 				instance: id,
 				task:     out.Ref,
 				until:    "provisioning",
 				negate:   true,
-				quiet:    opts.Quiet,
+				quiet:    Tweed.Quiet,
 			})
 		}
 
-		if opts.Quiet {
+		if !Tweed.Quiet {
 			fmt.Printf("%s\n", id)
 		} else {
 			fmt.Printf("instance: @C{%s}\n\n", id)
@@ -72,4 +82,5 @@ func Provision(args []string) {
 		fmt.Printf("@R{%s}\n", out.Error)
 		os.Exit(5)
 	}
+	return nil
 }

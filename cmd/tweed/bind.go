@@ -50,7 +50,7 @@ func (cmd *BindCommand) Execute(args []string) {
 				task:     out.Ref,
 				until:    "binding",
 				negate:   true,
-				quiet:    opts.Quiet,
+				quiet:    Tweed.Quiet,
 			})
 		}
 

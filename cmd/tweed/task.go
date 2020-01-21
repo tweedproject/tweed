@@ -8,16 +8,24 @@ import (
 	"github.com/tweedproject/tweed/api"
 )
 
-func Task(args []string) {
-	GonnaNeedATweed()
-	id, tid := GonnaNeedAnInstanceAndATask(args)
+type TaskCommand struct {
+	NoWait bool `long:"no-wait" description:"don't wait for the task to be 'quiet'"`
+	Args   struct {
+		InstanceTask []string `positional-arg-name:"instance/task" required:"true"`
+	} `positional-args:"yes"`
+}
 
-	c := Connect(opts.Tweed, opts.Username, opts.Password)
-	if opts.Task.Wait {
+func (cmd *TaskCommand) Execute(args []string) error {
+	SetupLogging()
+	GonnaNeedATweed()
+	id, tid := GonnaNeedAnInstanceAndATask(cmd.Args.InstanceTask)
+
+	c := Connect(Tweed.Tweed, Tweed.Username, Tweed.Password)
+	if !cmd.NoWait {
 		await(c, patience{
 			instance: id,
 			task:     tid,
-			quiet:    opts.Quiet,
+			quiet:    Tweed.Quiet,
 		})
 	}
 
@@ -29,7 +37,7 @@ func Task(args []string) {
 		os.Exit(1)
 	}
 
-	if opts.JSON {
+	if Tweed.JSON {
 		JSON(out)
 		os.Exit(0)
 	}
@@ -47,4 +55,5 @@ func Task(args []string) {
 	fmt.Printf("---[ stdout ]-------------\n%s\n\n", out.Stdout)
 	fmt.Printf("---[ stderr ]-------------\n%s\n\n", out.Stderr)
 	fmt.Printf("--------------------------\n\n")
+	return nil
 }
