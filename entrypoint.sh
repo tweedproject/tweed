@@ -73,4 +73,4 @@ find /tweed/etc/config.d -type f -name '*.yml' | sort | \
 	spruce json > $TWEED_CONFIG_FILE
 
 env | grep TWEED_
-exec /usr/bin/tweed broker
+exec /usr/bin/tweed broker "$@"

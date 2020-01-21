@@ -22,6 +22,7 @@ require (
 	github.com/elazarl/goproxy v0.0.0-20170405201442-c4fc26588b6e // indirect
 	github.com/evanphx/json-patch v4.2.0+incompatible // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
+	github.com/goccy/go-yaml v1.2.0
 	github.com/gogo/protobuf v1.2.2-0.20190723190241-65acae22fc9d // indirect
 	github.com/golang/groupcache v0.0.0-20160516000752-02826c3e7903 // indirect
 	github.com/google/uuid v1.1.1
@@ -31,14 +32,13 @@ require (
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/jessevdk/go-flags v1.4.0
 	github.com/jhunt/go-ansi v0.0.0-20181127194324-5fd839f108b6
-	github.com/jhunt/go-cli v0.0.0-20180120230054-44398e595118
-	github.com/jhunt/go-envirotron v0.0.0-20191007155228-c8f2a184ad0f
+	github.com/jhunt/go-cli v0.0.0-20180120230054-44398e595118 // indirect
+	github.com/jhunt/go-envirotron v0.0.0-20191007155228-c8f2a184ad0f // indirect
 	github.com/jhunt/go-log v0.0.0-20171024033145-ddc1e3b8ed30
 	github.com/jhunt/go-snapshot v0.0.0-20171017043618-9ad8f5ee37a2 // indirect
 	github.com/jhunt/go-table v0.0.0-20181127210244-68a841ca53dc
 	github.com/juju/ratelimit v1.0.1 // indirect
 	github.com/klauspost/compress v1.9.7 // indirect
-	github.com/mattn/go-isatty v0.0.10 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/onsi/ginkgo v1.10.1

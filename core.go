@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/tweedproject/tweed/creds"
 	"github.com/tweedproject/tweed/stencil"
 )
 
@@ -16,6 +17,7 @@ type Core struct {
 
 	Config         Config
 	StencilFactory *stencil.Factory
+	SecretManager  creds.Secrets
 
 	// FIXME track corrupted instances read at startup
 	instances map[string]*Instance
@@ -49,14 +51,14 @@ func (c *Core) Scan() error {
 				continue
 			}
 
-			inst, err := ParseInstance(c.Config.Catalog, c.StencilFactory, c.Root, b)
+			inst, err := ParseInstance(c.Config.Catalog, c.StencilFactory, c.SecretManager, c.Root, b)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "found corrupted service instance '%s' -- unable to parse %s/instance.mf: %s\n", id, id, err)
 				continue
 			}
 			inst.Prefix = c.Config.Prefix
 			inst.VaultPrefix = c.Config.Vault.Prefix
-			if err := inst.LookupBindings(); err != nil {
+			if err := inst.RefreshBindings(); err != nil {
 				fmt.Fprintf(os.Stderr, "found corrupted service instance '%s' -- unable to read bindings from the vault: %s\n", id, err)
 				continue
 			}

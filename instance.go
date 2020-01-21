@@ -8,6 +8,9 @@ import (
 	"path"
 	"strings"
 
+	"github.com/goccy/go-yaml"
+
+	"github.com/tweedproject/tweed/creds"
 	"github.com/tweedproject/tweed/stencil"
 )
 
@@ -16,10 +19,11 @@ type Instance struct {
 	Plan  *Plan
 	State string
 
-	Root        string
-	Prefix      string
-	VaultPrefix string
-	Stencil     *stencil.Stencil
+	Root          string
+	Prefix        string
+	VaultPrefix   string
+	Stencil       *stencil.Stencil
+	SecretManager creds.Secrets
 
 	UserParameters map[string]interface{}
 	Bindings       map[string]map[string]interface{}
@@ -89,7 +93,7 @@ func (i *Instance) mounts() []stencil.Mount {
 	}}
 }
 
-func ParseInstance(cat Catalog, fact *stencil.Factory, root string, b []byte) (Instance, error) {
+func ParseInstance(cat Catalog, fact *stencil.Factory, sm creds.Secrets, root string, b []byte) (Instance, error) {
 	var in instancemf
 
 	err := json.Unmarshal(b, &in)
@@ -112,6 +116,7 @@ func ParseInstance(cat Catalog, fact *stencil.Factory, root string, b []byte) (I
 		Root:           root,
 		Plan:           p,
 		Stencil:        s,
+		SecretManager:  sm,
 		UserParameters: in.Tweed.User,
 		State:          "quiet",
 	}
@@ -123,62 +128,61 @@ func ParseInstance(cat Catalog, fact *stencil.Factory, root string, b []byte) (I
 	return inst, nil
 }
 
-func (i *Instance) lookupBindings(id string) error {
-	if i.Bindings == nil {
+func (i *Instance) bindingsSecretPath() string {
+	return fmt.Sprintf("%s-bindings", i.ID)
+}
+
+func (i *Instance) RefreshBindings() error {
+	b, exist, err := i.SecretManager.Get(i.bindingsSecretPath())
+	if err != nil {
+		return err
+	}
+	if !exist {
 		i.Bindings = make(map[string]map[string]interface{})
+		return nil
 	}
 
-	b, err := run1(Exec{
-		Run: i.path("bin/bindings"),
-		Env: i.env([]string{"BINDING=" + id}),
-	})
+	raw, err := json.Marshal(b)
 	if err != nil {
 		return err
 	}
 
 	var all map[string]map[string]interface{}
-	err = json.Unmarshal(b, &all)
+	err = json.Unmarshal(raw, &all)
 	if err != nil {
 		return err
 	}
+	return nil
+}
 
-	for _, bindings := range all {
-		for id, raw := range bindings {
-			s, ok := raw.(string)
-			if !ok {
-				return fmt.Errorf("binding %s is not a string", id)
-			}
-			var v map[string]interface{}
-			if err := json.Unmarshal([]byte(s), &v); err != nil {
-				return err
-			}
-			i.Bindings[id] = v
-		}
+func (i *Instance) deleteBinding(id string) error {
+	if err := i.RefreshBindings(); err != nil {
+		return err
+	}
+	delete(i.Bindings, id)
+	err := i.SecretManager.Set(i.bindingsSecretPath(), i.Bindings)
+	if err != nil {
+		return err
 	}
 	return nil
 }
 
 func (i *Instance) saveBinding(id string, credentials []byte) error {
-	_, err := run1(Exec{
-		Run: i.path("bin/bind"),
-		Env: i.env([]string{
-			"BINDING=" + id,
-			"CREDENTIALS='" + string(credentials) + "'",
-		}),
-	})
-	if err != nil {
+	if err := i.RefreshBindings(); err != nil {
 		return err
 	}
 
+	var v map[string]interface{}
+	if err := yaml.Unmarshal(credentials, &v); err != nil {
+		return err
+	}
+	i.Bindings[id] = v
+
+	err := i.SecretManager.Set(i.bindingsSecretPath(), i.Bindings)
+	if err != nil {
+		return err
+	}
 	return nil
-}
-
-func (i *Instance) LookupBindings() error {
-	return i.lookupBindings("")
-}
-
-func (i *Instance) LookupBinding(id string) error {
-	return i.lookupBindings(id)
 }
 
 func (i *Instance) Log() string {
@@ -262,9 +266,6 @@ func (i *Instance) Bind(id string) (*task, error) {
 		if err := i.saveBinding(id, t.stdout.Bytes()); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to save newly-created binding %s/%s: %s", i.ID, id, err)
 		}
-		if err := i.LookupBinding(id); err != nil {
-			fmt.Fprintf(os.Stderr, "failed to look up newly-created binding %s/%s: %s", i.ID, id, err)
-		}
 	})
 
 	i.Tasks = append(i.Tasks, t)
@@ -288,7 +289,7 @@ func (i *Instance) Unbind(id string) (*task, error) {
 		Mounts:  i.mounts(),
 	}, func(_ *task) {
 		i.State = "quiet"
-		delete(i.Bindings, id)
+		i.deleteBinding(id)
 	})
 
 	i.Tasks = append(i.Tasks, t)

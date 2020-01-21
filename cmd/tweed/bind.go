@@ -18,7 +18,7 @@ type BindCommand struct {
 	} `positional-args:"yes"`
 }
 
-func (cmd *BindCommand) Execute(args []string) {
+func (cmd *BindCommand) Execute(args []string) error {
 	SetupLogging()
 	GonnaNeedATweed()
 
@@ -65,4 +65,5 @@ func (cmd *BindCommand) Execute(args []string) {
 		fmt.Printf("@R{%s}\n", out.Error)
 		os.Exit(5)
 	}
+	return nil
 }

@@ -11,7 +11,7 @@ import (
 type InstancesCommand struct {
 }
 
-func (cmd *InstancesCommand) Execute(args []string) {
+func (cmd *InstancesCommand) Execute(args []string) error {
 	GonnaNeedATweed()
 	DontWantNoArgs(args)
 
@@ -30,4 +30,5 @@ func (cmd *InstancesCommand) Execute(args []string) {
 		tbl.Row(nil, inst.ID, inst.State, inst.Service, inst.Plan)
 	}
 	tbl.Output(os.Stdout)
+	return nil
 }

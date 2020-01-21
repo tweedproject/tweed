@@ -10,6 +10,7 @@ import (
 	"github.com/tweedproject/tweed"
 	"github.com/tweedproject/tweed/stencil"
 
+	"code.cloudfoundry.org/lager"
 	"github.com/jessevdk/go-flags"
 
 	"github.com/tweedproject/tweed/creds"
@@ -56,6 +57,16 @@ func (cmd *BrokerCommand) Execute(args []string) error {
 
 	logger := log.New(log.Writer(), "", log.LstdFlags)
 
+	credsLogger := lager.NewLogger("broker")
+	credsLogger.RegisterSink(lager.NewWriterSink(log.Writer(), lager.INFO))
+
+	secretManager, err := cmd.secretManager(credsLogger)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "@R{(error)} failed to configure the Credential Manager:\n")
+		fmt.Fprintf(os.Stderr, "        @R{%s}\n", err)
+		os.Exit(1)
+	}
+
 	stencilFactory := stencil.NewFactory(cmd.Root, logger)
 	core := tweed.Core{
 		Root:             cmd.Root,
@@ -63,6 +74,7 @@ func (cmd *BrokerCommand) Execute(args []string) error {
 		HTTPAuthPassword: cmd.HTTPAuthPassword,
 		HTTPAuthRealm:    cmd.HTTPAuthRealm,
 		StencilFactory:   stencilFactory,
+		SecretManager:    secretManager,
 	}
 	if cmd.ConfigJSON != "" {
 		cmd.Config = "{{json literal from environment}}"
@@ -174,4 +186,44 @@ func (cmd *BrokerCommand) WireDynamicFlags(commandFlags *flags.Command) {
 	}
 	cmd.CredentialManagers = managerConfigs
 
+}
+
+func (cmd *BrokerCommand) secretManager(logger lager.Logger) (creds.Secrets, error) {
+	var secretsFactory creds.SecretsFactory
+	for name, manager := range cmd.CredentialManagers {
+		if !manager.IsConfigured() {
+			continue
+		}
+
+		credsLogger := logger.Session("credential-manager", lager.Data{
+			"name": name,
+		})
+
+		credsLogger.Info("configured credentials manager")
+
+		err := manager.Init(credsLogger)
+		if err != nil {
+			return nil, err
+		}
+
+		err = manager.Validate()
+		if err != nil {
+			return nil, fmt.Errorf("credential manager '%s' misconfigured: %s", name, err)
+		}
+
+		secretsFactory, err = manager.NewSecretsFactory(credsLogger)
+		if err != nil {
+			return nil, err
+		}
+
+		break
+	}
+
+	if secretsFactory == nil {
+		return nil, fmt.Errorf("Missing configured Credential Manager")
+	}
+
+	result := secretsFactory.NewSecrets()
+	result = creds.NewRetryableSecrets(result, cmd.CredentialManagement.RetryConfig)
+	return result, nil
 }
