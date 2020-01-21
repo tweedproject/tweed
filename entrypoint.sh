@@ -64,9 +64,10 @@ infrastructures:
 EOF
 fi
 
-duffle relocate -f /tweed/etc/config.d/provided/bundle.json \
-       --relocation-mapping /dev/null \
-       --repository-prefix=localhost:5000
+skopeo --insecure-policy sync --src yaml --dest docker \
+       --dest-tls-verify=false \
+       /tweed/etc/config.d/provided/skopeo.yml \
+       localhost:5000
 
 find /tweed/etc/config.d -type f -name '*.yml' | sort | \
 	xargs spruce merge --skip-eval | \

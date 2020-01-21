@@ -67,20 +67,12 @@ data:
   tweed.yml: |
     prefix: ''
 
-  # images can also be referenced by digest
-  # "image": "rkoster/mysql-tweed-stencil:latest@sha256:427def8443fb0d9c40a2e0268c293209330cbc3813dd05f98ae6d98f44d71798"
-  bundle.json: |
-    {
-      "name": "catalog",
-      "version": "0.1.1",
-      "schemaVersion": "v1.0.0-WD",
-      "invocationImages": [{
-        "imageType": "docker",
-        "image": "rkoster/mysql-tweed-stencil:latest"
-      }],
-      "parameters": {},
-      "actions": {}
-    }
+  skopeo.yml: |
+    registry.hub.docker.com:
+      tls-verify: true
+      images:
+        rkoster/mysql-tweed-stencil:
+        - latest
 
   catalog.yml: |
     catalog:
@@ -98,7 +90,7 @@ data:
                 MySQL version 8.x
               tweed:
                 infrastructure: k8s
-                stencil: rkoster-mysql-tweed-stencil-ff6512653ee593d52f1c450f65aa3faf
+                stencil: mysql-tweed-stencil:latest
                 limit:  2
                 config:
                   version: '8'
