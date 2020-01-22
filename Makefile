@@ -6,7 +6,7 @@ BUILD   ?= $(shell ./build/build-number)
 LDFLAGS := -X main.Version="$(VERSION)" -X main.BuildNumber="$(BUILD)"
 PWD = $(shell pwd)
 
-.PHONY: test docker deploy push test unit-container unit-watch
+.PHONY: test docker deploy push test bg-tests
 
 default:
 	go fmt . ./api ./cmd/tweed
@@ -45,11 +45,9 @@ push: default
 test:
 	./test/the all
 
-unit-container:
+bg-tests:
 	docker build -t tweed-unit -f Dockerfile.test .
-	go mod vendor
-	docker run --rm -it  --privileged \
-		--mount type=bind,source=$(PWD),target=/tweed,consistency=cached tweed-unit:latest
-
-unit-watch:
-	ginkgo watch ./...
+	docker run --rm -it --privileged \
+	           --mount type=bind,source=$(PWD),target=/tweed,consistency=cached \
+	           tweed-unit:latest \
+	           ginkgo watch ./...

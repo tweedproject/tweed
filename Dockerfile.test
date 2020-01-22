@@ -25,4 +25,4 @@ RUN nohup bash -c "registry serve /etc/docker/registry/config.yml &" && \
     skopeo --insecure-policy copy --dest-tls-verify=false \
            docker://curlimages/curl docker://localhost:5000/curl:latest
 
-ENTRYPOINT /bin/bash
+CMD ["/bin/bash"]
