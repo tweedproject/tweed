@@ -36,3 +36,64 @@ To run the unit tests in the background, run:
 Now, you can hack on the source code and flip back to the tests
 every once in a while to see if everything is still okay, from a
 unit test perspective.
+
+
+
+Interactive Testing via Kubernetes
+----------------------------------
+
+Because of all of Tweed's moving parts, one way to spin it up for
+interactive use, testing, and exploration is to actually deploy it
+to Kubernetes.
+
+To do this with the latest official Tweed images, target a
+Kubernetes cluster and then run:
+
+    make deploy
+    source env/dev/envrc
+
+This creates a `tweed` namespace and deploys the broker and all of
+its pieces (a credentials vault, a database, etc.) into that.
+To use an alternate namespace, set the `$NAMESPACE` environment
+variable:
+
+    NAMESPACE=dev-tweed make deploy
+    source env/dev/envrc
+
+The second command updates your current shell with the `TWEED_*`
+environment variables that you will need to seamlessly interact
+with the broker via the `tweed` CLI, without having to specify a
+bunch of arguments every time.
+
+The details of the Kubernetes deployment can be found in the
+`env/dev/k8s.yml`.  If you are interested solely in the
+contents of the manifest, as rendered (given the `$IMAGE`,
+`$NAMESPACE` and `$VERSION` environment variables), run:
+
+    make deploy.yml
+
+If you are making changes to Tweed itself (as opposed to
+developing a new stencil), you'll want to override the broker
+image that gets deployed by setting the `$IMAGE` environment
+variable:
+
+    IMAGE=filefrog/tweed make deploy
+
+To build (and push) your alternate image:
+
+    IMAGE=filefrog/tweed make docker
+    docker push filefrog/tweed
+
+Note: you do **not** want to use `make push` to push your Docker
+images upstream; that Makefile target does a bunch of semantic
+versioning re-tagging, making it a bad idea for one-off dev tags.
+
+When you're all done and want to tear it down, you can either just
+delete the Kubernetes namespace ("tweed", by default), or run:
+
+    make retire
+
+Remember: you can chain Makefile targets in a single invocation of
+`make`, allowing you to delete and redeploy with just:
+
+    make retire deploy

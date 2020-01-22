@@ -71,8 +71,7 @@ data:
     registry.hub.docker.com:
       tls-verify: true
       images:
-        rkoster/mysql-tweed-stencil:
-        - latest
+        rkoster/mysql-tweed-stencil: ["latest"]
 
   catalog.yml: |
     catalog:
@@ -141,19 +140,19 @@ spec:
           image: registry:latest
           imagePullPolicy: Always
           command:
-          - /bin/registry
-          - serve
-          - /etc/docker/registry/config.yml
+            - /bin/registry
+            - serve
+            - /etc/docker/registry/config.yml
           env:
-          - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
-            value: "/var/lib/registry"
+            - name: REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY
+              value: "/var/lib/registry"
 
         - name:  broker
           image: ${IMAGE}:${VERSION}
           imagePullPolicy: Always
           args:
-          - --kubernetes-in-cluster
-          - --kubernetes-namespace=${NAMESPACE}
+            - --kubernetes-in-cluster
+            - --kubernetes-namespace=${NAMESPACE}
           securityContext:
             privileged: true
           ports:
