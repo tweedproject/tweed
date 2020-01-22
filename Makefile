@@ -6,7 +6,7 @@ BUILD   ?= $(shell ./build/build-number)
 LDFLAGS := -X main.Version="$(VERSION)" -X main.BuildNumber="$(BUILD)"
 PWD = $(shell pwd)
 
-.PHONY: test
+.PHONY: test docker deploy push test unit-container unit-watch
 
 default:
 	go fmt . ./api ./cmd/tweed
