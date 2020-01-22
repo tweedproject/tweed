@@ -1,9 +1,10 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
 	"strings"
+
+	fmt "github.com/jhunt/go-ansi"
 )
 
 func DontWantNoArgs(args []string) {

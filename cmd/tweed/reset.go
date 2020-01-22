@@ -1,14 +1,22 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
+
+	fmt "github.com/jhunt/go-ansi"
 )
 
-func Reset(args []string) {
+type ResetCommand struct {
+	Args struct {
+		ID string `positional-arg-name:"instance" required:"true"`
+	} `positional-args:"yes"`
+	State string `short:"s" long:"state" default:"quiet" description:"expected state"`
+}
+
+func (cmd *ResetCommand) Execute(args []string) error {
 	GonnaNeedATweed()
 
-	switch opts.Reset.State {
+	switch cmd.State {
 	case "quiet":
 	case "provisioning":
 	case "binding":
@@ -29,7 +37,7 @@ func Reset(args []string) {
 		os.Exit(1)
 	}
 
-	id := GonnaNeedAnInstance(args)
-	c := Connect(opts.Tweed, opts.Username, opts.Password)
-	c.PUT("/b/instances/"+id+"/state/"+opts.Reset.State, nil, nil)
+	id := cmd.Args.ID
+	c := Connect(Tweed.Tweed, Tweed.Username, Tweed.Password)
+	return c.PUT("/b/instances/"+id+"/state/"+cmd.State, nil, nil)
 }

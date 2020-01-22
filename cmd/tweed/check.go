@@ -1,21 +1,29 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/tweedproject/tweed/api"
 )
 
-func Check(args []string) {
+type CheckCommand struct {
+	Args struct {
+		ServicePlan []string `positional-arg-name:"service/plan" required:"true"`
+	} `positional-args:"yes"`
+}
+
+func (cmd *CheckCommand) Execute(args []string) error {
+	SetupLogging()
 	GonnaNeedATweed()
-	service, plan := GonnaNeedAServiceAndAPlan(args)
+	service, plan := GonnaNeedAServiceAndAPlan(cmd.Args.ServicePlan)
 
 	var out api.ViabilityResponse
-	c := Connect(opts.Tweed, opts.Username, opts.Password)
+	c := Connect(Tweed.Tweed, Tweed.Username, Tweed.Password)
 	c.GET("/b/catalog/"+service+"/"+plan, &out)
 
-	if opts.JSON {
+	if Tweed.JSON {
 		JSON(out)
 		if out.OK != "" {
 			os.Exit(1)
@@ -24,11 +32,12 @@ func Check(args []string) {
 	}
 
 	if out.OK != "" {
-		if !opts.Quiet {
+		if !Tweed.Quiet {
 			fmt.Printf("@G{%s}\n", out.OK)
 		}
 	} else {
 		fmt.Printf("@R{%s}\n", out.Error)
 		os.Exit(5)
 	}
+	return nil
 }

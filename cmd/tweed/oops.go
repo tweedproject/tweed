@@ -1,21 +1,27 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/tweedproject/tweed/api"
 )
 
-func Oops(args []string) {
+type OopsCommand struct {
+	Args struct {
+		ID string `positional-arg-name:"id" required:"true"`
+	} `positional-args:"yes"`
+}
+
+func (cmd *OopsCommand) Execute(args []string) error {
 	GonnaNeedATweed()
-	id := GonnaNeedAnError(args)
 
 	var out api.OopsResponse
-	c := Connect(opts.Tweed, opts.Username, opts.Password)
-	c.GET("/b/oops/"+id, &out)
+	c := Connect(Tweed.Tweed, Tweed.Username, Tweed.Password)
+	c.GET("/b/oops/"+cmd.Args.ID, &out)
 
-	if opts.JSON {
+	if Tweed.JSON {
 		JSON(out)
 		os.Exit(0)
 	}
@@ -26,4 +32,5 @@ func Oops(args []string) {
 	fmt.Printf("dated:    %s\n", out.Dated)
 	fmt.Printf("message:  %s\n", out.Message)
 	fmt.Printf("\n%s\n", out.Request)
+	return nil
 }

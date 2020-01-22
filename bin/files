@@ -1,4 +1,0 @@
-#!/bin/bash
-set -eu
-cd $WORKSPACE
-./lifecycle/files | spruce json

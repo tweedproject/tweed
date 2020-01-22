@@ -37,8 +37,8 @@ for plan in $(cd test/sets; for x in "$@"; do ./$x; done | sort | uniq); do
   check
 
   id=i$(uuidgen | tr A-Z a-z | cut -d - -f2,3,4)
-  echo; echo "++ PROVISIONING: tweed provision $plan --as $id"; echo
-  ./tweed provision $plan --as $id
+  echo; echo "++ PROVISIONING: tweed provision $plan --as=$id"; echo
+  ./tweed provision $plan --as=$id
   check
 
   echo; echo "++ BINDING: tweed bind $id"; echo

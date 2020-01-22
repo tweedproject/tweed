@@ -8,16 +8,19 @@ import (
 	"github.com/tweedproject/tweed/api"
 )
 
-func Instances(args []string) {
+type InstancesCommand struct {
+}
+
+func (cmd *InstancesCommand) Execute(args []string) error {
 	GonnaNeedATweed()
 	DontWantNoArgs(args)
 
 	var out []api.InstanceResponse
-	c := Connect(opts.Tweed, opts.Username, opts.Password)
+	c := Connect(Tweed.Tweed, Tweed.Username, Tweed.Password)
 	err := c.GET("/b/instances", &out)
 	bail(err)
 
-	if opts.JSON {
+	if Tweed.JSON {
 		JSON(out)
 		os.Exit(0)
 	}
@@ -27,4 +30,5 @@ func Instances(args []string) {
 		tbl.Row(nil, inst.ID, inst.State, inst.Service, inst.Plan)
 	}
 	tbl.Output(os.Stdout)
+	return nil
 }

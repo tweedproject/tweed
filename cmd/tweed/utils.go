@@ -1,8 +1,11 @@
 package main
 
 import (
-	fmt "github.com/jhunt/go-ansi"
 	"os"
+
+	fmt "github.com/jhunt/go-ansi"
+
+	"github.com/jhunt/go-log"
 )
 
 func bail(err error) {
@@ -12,17 +15,24 @@ func bail(err error) {
 	}
 }
 
+func SetupLogging() {
+	log.SetupLogging(log.LogConfig{
+		Type:  "console",
+		Level: Tweed.LogLevel,
+	})
+}
+
 func GonnaNeedATweed() {
 	ok := true
-	if opts.Tweed == "" {
+	if Tweed.Tweed == "" {
 		fmt.Fprintf(os.Stderr, "@R{(error)} No @R{--tweed} flag given, and @W{$TWEED_URL} not set.\n")
 		ok = false
 	}
-	if opts.Username == "" {
+	if Tweed.Username == "" {
 		fmt.Fprintf(os.Stderr, "@R{(error)} No @R{--username} flag given, and @W{$TWEED_USERNAME} not set.\n")
 		ok = false
 	}
-	if opts.Password == "" {
+	if Tweed.Password == "" {
 		fmt.Fprintf(os.Stderr, "@R{(error)} No @R{--password} flag given, and @W{$TWEED_PASSWORD} not set.\n")
 		ok = false
 	}

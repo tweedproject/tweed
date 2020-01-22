@@ -21,7 +21,7 @@ type patience struct {
 }
 
 func (p patience) printf(f string, args ...interface{}) {
-	if !p.quiet && !opts.JSON {
+	if !p.quiet && !Tweed.JSON {
 		fmt.Printf(f, args...)
 	}
 }

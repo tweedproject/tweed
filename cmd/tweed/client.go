@@ -3,12 +3,13 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	fmt "github.com/jhunt/go-ansi"
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"os"
 	"strings"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/tweedproject/tweed/api"
 )
@@ -34,7 +35,7 @@ func Connect(url, username, password string) *client {
 
 func (c *client) do(req *http.Request, out interface{}) (*http.Response, error) {
 	req.SetBasicAuth(c.username, c.password)
-	if opts.Debug {
+	if Tweed.Debug {
 		b, err := httputil.DumpRequest(req, true)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "DEBUG: @W{unable to dump request:} @R{%s}\n", err)
@@ -43,7 +44,7 @@ func (c *client) do(req *http.Request, out interface{}) (*http.Response, error) 
 		}
 	}
 	res, err := c.http.Do(req)
-	if res != nil && opts.Debug {
+	if res != nil && Tweed.Debug {
 		b, err := httputil.DumpResponse(res, true)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "DEBUG: @W{unable to dump response:} @R{%s}\n", err)

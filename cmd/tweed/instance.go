@@ -2,21 +2,29 @@ package main
 
 import (
 	"encoding/json"
-	fmt "github.com/jhunt/go-ansi"
 	"os"
+
+	fmt "github.com/jhunt/go-ansi"
 
 	"github.com/tweedproject/tweed/api"
 )
 
-func Instance(args []string) {
+type InstanceCommand struct {
+	Args struct {
+		ID string `positional-arg-name:"instance" required:"true"`
+	} `positional-args:"yes"`
+}
+
+func (cmd *InstanceCommand) Execute(args []string) error {
+	SetupLogging()
 	GonnaNeedATweed()
-	id := GonnaNeedAnInstance(args)
+	id := cmd.Args.ID
 
 	var out api.InstanceResponse
-	c := Connect(opts.Tweed, opts.Username, opts.Password)
+	c := Connect(Tweed.Tweed, Tweed.Username, Tweed.Password)
 	c.GET("/b/instances/"+id, &out)
 
-	if opts.JSON {
+	if Tweed.JSON {
 		JSON(out)
 		os.Exit(0)
 	}
@@ -49,4 +57,5 @@ func Instance(args []string) {
 			fmt.Printf("\n")
 		}
 	}
+	return nil
 }

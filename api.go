@@ -175,12 +175,13 @@ func (c *Core) API() *route.Router {
 		}
 
 		inst := Instance{
-			ID:          "vi-ab-le",
-			Plan:        plan,
-			Root:        c.Root,
-			Prefix:      c.Config.Prefix,
-			VaultPrefix: c.Config.Vault.Prefix,
-			Stencil:     s,
+			ID:            "vi-ab-le",
+			Plan:          plan,
+			Root:          c.Root,
+			Prefix:        c.Config.Prefix,
+			VaultPrefix:   c.Config.Vault.Prefix,
+			Stencil:       s,
+			SecretManager: c.SecretManager,
 		}
 		if err := inst.Viable(); err != nil {
 			r.OK(api.ViabilityResponse{
@@ -225,6 +226,7 @@ func (c *Core) API() *route.Router {
 			VaultPrefix:    c.Config.Vault.Prefix,
 			UserParameters: in.Params,
 			Stencil:        s,
+			SecretManager:  c.SecretManager,
 		})
 		if err != nil {
 			c.oopsie(r, "unable to provision a %s / %s service instance: %s", in.Service, in.Plan, err)

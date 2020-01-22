@@ -8,15 +8,22 @@ import (
 	"github.com/tweedproject/tweed/api"
 )
 
-func Files(args []string) {
+type FilesCommand struct {
+	Args struct {
+		ID string `positional-arg-name:"instance" required:"true"`
+	} `positional-args:"yes"`
+}
+
+func (cmd *FilesCommand) Execute(args []string) error {
+	SetupLogging()
 	GonnaNeedATweed()
-	id := GonnaNeedAnInstance(args)
+	id := cmd.Args.ID
 
 	var out []api.FileResponse
-	c := Connect(opts.Tweed, opts.Username, opts.Password)
+	c := Connect(Tweed.Tweed, Tweed.Username, Tweed.Password)
 	c.GET("/b/instances/"+id+"/files", &out)
 
-	if opts.JSON {
+	if Tweed.JSON {
 		JSON(out)
 		os.Exit(0)
 	}
@@ -26,4 +33,5 @@ func Files(args []string) {
 		tbl.Row(nil, file.Filename, file.Summary, file.Description)
 	}
 	tbl.Output(os.Stdout)
+	return nil
 }
