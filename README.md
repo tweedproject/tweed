@@ -25,7 +25,7 @@ Yeah, so about that.  Tweed is very hard to run by hand.  We're
 working on that.  [Hopefully we'll have a Helm chart by the end of
 February!][gh7]
 
-[gh1]: https://github.com/tweedproject/tweed/issues/7
+[gh7]: https://github.com/tweedproject/tweed/issues/7
 
 
 
