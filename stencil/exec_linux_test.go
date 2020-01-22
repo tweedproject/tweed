@@ -162,7 +162,7 @@ var _ = Describe("Exec", func() {
 		Expect(string(stderr.Bytes())).To(ContainSubstring("Connection refused"))
 	})
 
-	It("returns exit code of a exited process", func() {
+	It("returns standard error of an exited process as an error", func() {
 		stencil, err := factory.Get("curl:latest")
 		Expect(err).ToNot(HaveOccurred())
 		_, err = Run(Exec{
