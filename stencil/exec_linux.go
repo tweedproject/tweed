@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/google/uuid"
 
@@ -104,7 +105,7 @@ func (e *Exec) Eval() (*ProcessState, error) {
 	code, err := e.Stencil.runc.client.Run(ctx, id.String(), bundlePath, &gorunc.CreateOpts{
 		IO: pipe,
 	})
-	if err != nil {
+	if err != nil && !strings.HasSuffix(err.Error(), "did not terminate successfully") {
 		return &ProcessState{
 			Exited:   true,
 			ExitCode: code,
