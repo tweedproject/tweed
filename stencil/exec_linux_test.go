@@ -81,8 +81,7 @@ var _ = Describe("Exec", func() {
 		testMount, err := ioutil.TempDir("", "testmount")
 		defer os.RemoveAll(testMount)
 		Expect(err).ToNot(HaveOccurred())
-		testFile := path.Join(testMount, "foo")
-		f, err := os.Create(testFile)
+		f, err := os.Create(path.Join(testMount, "foo"))
 		Expect(err).ToNot(HaveOccurred())
 		_, err = f.WriteString("Hello World from mount")
 		Expect(err).ToNot(HaveOccurred())
@@ -91,11 +90,11 @@ var _ = Describe("Exec", func() {
 		stencil, err := factory.Get("curl:latest")
 		Expect(err).ToNot(HaveOccurred())
 		out, err := Run(Exec{
-			Args:    []string{"/bin/cat", testFile},
+			Args:    []string{"/bin/cat", "/data/foo"},
 			Stencil: stencil,
 			Mounts: []Mount{{
 				Source:      testMount,
-				Destination: testMount,
+				Destination: "/data",
 			}},
 		})
 		Expect(err).ToNot(HaveOccurred())
