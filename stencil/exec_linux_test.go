@@ -32,6 +32,7 @@ var _ = Describe("Exec", func() {
 		factory = NewFactory(rootDir, logger)
 		dockerRegistry = exec.Command("registry", "serve", "/etc/docker/registry/config.yml")
 		err = dockerRegistry.Start()
+		Expect(err).ToNot(HaveOccurred())
 		for {
 			_, err := net.Dial("tcp", "localhost:5000")
 			if err == nil {
@@ -39,7 +40,6 @@ var _ = Describe("Exec", func() {
 			}
 			time.Sleep(1 * time.Second)
 		}
-		Expect(err).ToNot(HaveOccurred())
 	})
 
 	It("loads stencil image", func() {
