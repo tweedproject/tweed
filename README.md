@@ -44,7 +44,7 @@ Contributing
 ------------
 
 This project falls under the [governance model][gov] of the larger
-[Tweed Project][gh], and contibutions are governed by our [Code of
+[Tweed Project][gh], and contributions are governed by our [Code of
 Conduct][coc] and [CONTRIBUTING.md][contrib] guide.
 
 [gov]:     https://github.com/tweedproject/governance
