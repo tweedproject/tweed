@@ -1,7 +1,7 @@
 FROM golang:1.13
 
 RUN apt-get update && \
-    apt-get install git curl libgpgme-dev libassuan-dev libbtrfs-dev libdevmapper-dev -y
+    apt-get install git curl libgpgme-dev libassuan-dev libbtrfs-dev libdevmapper-dev fuse -y
 
 RUN go get github.com/onsi/ginkgo/ginkgo
 

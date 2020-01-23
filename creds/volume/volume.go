@@ -3,20 +3,20 @@ package volume
 import (
 	"context"
 
-	"github.com/blang/vfs/memfs"
+	"github.com/hanwen/go-fuse/v2/fs"
+	"github.com/hanwen/go-fuse/v2/fuse"
 	"github.com/tweedproject/tweed/creds"
-	"golang.org/x/tools/godoc/vfs"
 )
 
 type Volume struct {
 	secrets creds.Secrets
 	secret  string
 	target  string
-	root    *credRoot
+	fssrv   *fuse.Server
 }
 
-func (v *Volume) Close() error {
-	return nil
+func (v *Volume) Unmount() error {
+	return v.fssrv.Unmount()
 }
 
 func (v *Volume) mount(ctx context.Context) error {
@@ -24,7 +24,19 @@ func (v *Volume) mount(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	v.root = root
-	fs := mountfs.Create(vfs.OS())
-	return fs.Mount(memfs.Create(), v.target)
+	fssrv, err := fs.Mount(v.target, root, &fs.Options{
+		// MountOptions: fuse.MountOptions{
+		//   Debug:      true,
+		// },
+	})
+	if err != nil {
+		return err
+	}
+	v.fssrv = fssrv
+	go v.fssrv.Serve()
+	err = v.fssrv.WaitMount()
+	if err != nil {
+		return err
+	}
+	return nil
 }

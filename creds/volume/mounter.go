@@ -1,6 +1,8 @@
 package volume
 
 import (
+	"context"
+
 	"github.com/tweedproject/tweed/creds"
 )
 
@@ -14,13 +16,13 @@ func NewMounter(s creds.Secrets) *Mounter {
 	}
 }
 
-func (m *Mounter) Mount(target, secret string) (*Volume, error) {
-	mount := Volume{
+func (m *Mounter) Mount(ctx context.Context, target, secret string) (*Volume, error) {
+	volume := Volume{
 		secrets: m.secrets,
 		secret:  secret,
 		target:  target,
 	}
-	err := volume.mount()
+	err := volume.mount(ctx)
 	if err != nil {
 		return nil, err
 	}
