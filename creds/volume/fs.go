@@ -17,20 +17,59 @@ type credFile struct {
 	fs.Inode
 
 	data []byte
+	root *credRoot
 }
 
-var _ = (fs.NodeOpener)((*credFile)(nil))
+func (cf *credFile) resize(sz uint64) {
+	if sz > uint64(cap(cf.data)) {
+		n := make([]byte, sz)
+		copy(n, cf.data)
+		cf.data = n
+	} else {
+		cf.data = cf.data[:sz]
+	}
+}
+
+func (cf *credFile) getattr(out *fuse.AttrOut) {
+	out.Size = uint64(len(cf.data))
+}
 
 var _ = (fs.NodeGetattrer)((*credFile)(nil))
 
 func (cf *credFile) Getattr(ctx context.Context, f fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
-	out.Size = uint64(len(cf.data))
+	cf.getattr(out)
 	return 0
 }
 
-func (cf *credFile) Open(ctx context.Context, flags uint32) (fs.FileHandle, uint32, syscall.Errno) {
-	return nil, fuse.FOPEN_KEEP_CACHE, fs.OK
+var _ = (fs.NodeSetattrer)((*credFile)(nil))
+
+func (cf *credFile) Setattr(ctx context.Context, fh fs.FileHandle, in *fuse.SetAttrIn, out *fuse.AttrOut) syscall.Errno {
+	if sz, ok := in.GetSize(); ok {
+		cf.resize(sz)
+	}
+	cf.getattr(out)
+	return 0
 }
+
+var _ = (fs.NodeWriter)((*credFile)(nil))
+
+func (cf *credFile) Write(ctx context.Context, fh fs.FileHandle, buf []byte, off int64) (uint32, syscall.Errno) {
+	sz := int64(len(buf))
+	if off+sz > int64(len(cf.data)) {
+		cf.resize(uint64(off + sz))
+	}
+	copy(cf.data[off:], buf)
+	cf.root.data[cf.Path(nil)] = cf.data
+	return uint32(sz), cf.root.sync()
+}
+
+var _ = (fs.NodeOpener)((*credFile)(nil))
+
+func (cf *credFile) Open(ctx context.Context, flags uint32) (fs.FileHandle, uint32, syscall.Errno) {
+	return nil, 0, 0
+}
+
+var _ = (fs.NodeReader)((*credFile)(nil))
 
 func (cf *credFile) Read(ctx context.Context, f fs.FileHandle, dest []byte, off int64) (fuse.ReadResult, syscall.Errno) {
 	end := int(off) + len(dest)
@@ -48,8 +87,6 @@ type credRoot struct {
 }
 
 var _ = (fs.NodeOnAdder)((*credRoot)(nil))
-
-//var _ = (fs.NodeFsyncer)((*credRoot)(nil))
 
 func createRoot(ctx context.Context, secrets creds.Secrets, secret string) (*credRoot, error) {
 	root := &credRoot{
@@ -96,11 +133,16 @@ func (root *credRoot) OnAdd(ctx context.Context) {
 
 			p = ch
 		}
-		ch := p.NewPersistentInode(ctx, &credFile{data: data}, fs.StableAttr{})
+		ch := p.NewPersistentInode(ctx, &credFile{data: data, root: root}, fs.StableAttr{})
 		p.AddChild(base, ch, true)
 	}
 }
 
-func (cr *credRoot) Flush(ctx context.Context, f fs.FileHandle) syscall.Errno {
+func (root *credRoot) sync() syscall.Errno {
+	err := root.secrets.Set(root.secret, root.data)
+	if err != nil {
+		fmt.Printf("Encountered an error while persisting secrets volume changes: %s", err)
+		return 1
+	}
 	return 0
 }

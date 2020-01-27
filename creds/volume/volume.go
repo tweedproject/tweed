@@ -25,9 +25,11 @@ func (v *Volume) mount(ctx context.Context) error {
 		return err
 	}
 	fssrv, err := fs.Mount(v.target, root, &fs.Options{
-		// MountOptions: fuse.MountOptions{
-		//   Debug:      true,
-		// },
+		MountOptions: fuse.MountOptions{
+			// So we don't have to use locking
+			SingleThreaded: true,
+			//			Debug:          true,
+		},
 	})
 	if err != nil {
 		return err
