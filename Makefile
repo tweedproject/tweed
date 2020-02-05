@@ -14,6 +14,9 @@ default:
 docker:
 	docker build -t $(IMAGE):edge .
 
+retire:
+	kubectl delete ns $(NAMESPACE)
+
 deploy:
 	cat eval.yml | \
 	  IMAGE=$(IMAGE) \
