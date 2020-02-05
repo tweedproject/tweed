@@ -21,7 +21,7 @@ deploy:
 	  NAMESPACE=$(NAMESPACE) \
           envsubst | kubectl apply -f -
 
-push: default
+push:
 	@echo "Checking that VERSION was defined in the calling environment"
 	@test -n "$(VERSION)"
 	@echo "OK.  VERSION=$(VERSION)"
