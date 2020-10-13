@@ -13,16 +13,7 @@ default:
 
 docker:
 	docker build -t $(IMAGE):edge .
-
-retire:
-	kubectl delete ns $(NAMESPACE)
-
-deploy:
-	cat eval.yml | \
-	  IMAGE=$(IMAGE) \
-          VERSION=$(VERSION) \
-	  NAMESPACE=$(NAMESPACE) \
-          envsubst | kubectl apply -f -
+	docker push $(IMAGE):edge
 
 push:
 	@echo "Checking that VERSION was defined in the calling environment"

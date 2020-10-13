@@ -1,44 +1,52 @@
 ---
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: ${NAMESPACE}
----
-apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: tweed
-  namespace: ${NAMESPACE}
+  namespace: tweed
+  name:      broker
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: tweed-broker
-  namespace: ${NAMESPACE}
+  namespace: tweed
+  name:      broker
 rules:
   - apiGroups: ["", "batch", "extensions", "apps", "autoscaling"]
     resources: ["*"]
     verbs:     ["*"]
+
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: tweed
-  namespace: ${NAMESPACE}
+  namespace: tweed
+  name:      broker
 subjects:
-  - kind: ServiceAccount
-    name: tweed
-    namespace: ${NAMESPACE}
+  - kind:      ServiceAccount
+    namespace: tweed
+    name:      broker
 roleRef:
   kind: ClusterRole
-  name: tweed-broker
+  name: broker
   apiGroup: rbac.authorization.k8s.io
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name:      tweed
+  namespace: tweed
+stringData:
+  username: tweed
+  password: tweed
+
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   name:      vault
-  namespace: ${NAMESPACE}
+  namespace: tweed
 data:
   local.json: |
     {
@@ -62,7 +70,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name:      tweed
-  namespace: ${NAMESPACE}
+  namespace: tweed
 data:
   tweed.yml: |
     prefix: ''
@@ -122,35 +130,29 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name:      tweed
-  namespace: ${NAMESPACE}
+  namespace: tweed
+  name:      broker
   labels:
     app:     tweed
-    env:     eval
-    version: alpha
 
 spec:
   replicas: 1
   selector:
     matchLabels:
       app:     tweed
-      env:     eval
-      version: alpha
   template:
     metadata:
       labels:
         app:     tweed
-        env:     eval
-        version: alpha
     spec:
-      serviceAccountName: tweed
+      serviceAccountName: broker
       containers:
         - name:  vault
           image: vault:latest
           imagePullPolicy: Always
           ports:
             - name: tweed
-              containerPort: 80
+              containerPort: 8080
           env:
             - name:  VAULT_API_ADDR
               value: http://127.0.0.1:8200
@@ -165,25 +167,40 @@ spec:
               mountPath: /vault/config
 
         - name:  broker
-          image: ${IMAGE}:${VERSION}
+          image: tweedproject/kernel:edge
           imagePullPolicy: Always
           env:
             - name:  INIT_VAULT
               value: http://127.0.0.1:8200
             - name:  USE_THIS_KUBERNETES
               value: 'yes'
+
             - name:  TWEED_LISTEN
-              value: ':80'
-            - name:  TWEED_HTTP_USERNAME
-              value: tweed
-            - name:  TWEED_USERNAME
-              value: tweed
-            - name:  TWEED_HTTP_PASSWORD
-              value: tweed
-            - name:  TWEED_PASSWORD
-              value: tweed
+              value: ':8080'
             - name:  TWEED_URL
-              value: http://127.0.0.1:80
+              value: http://127.0.0.1:8080
+
+            - name: TWEED_HTTP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: tweed
+                  key:  username
+            - name: TWEED_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: tweed
+                  key:  username
+
+            - name: TWEED_HTTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: tweed
+                  key:  password
+            - name: TWEED_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: tweed
+                  key:  password
 
           volumeMounts:
             - name: tweed
@@ -200,14 +217,12 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: tweed
-  namespace: ${NAMESPACE}
+  namespace: tweed
+  name:      broker
   labels:
     app:     tweed
-    env:     eval
-    version: alpha
 spec:
-  type: NodePort
+  type: ClusterIP
   ports:
     - name: tweed
       port: 80
@@ -215,5 +230,28 @@ spec:
       targetPort: tweed
   selector:
     app:     tweed
-    env:     eval
-    version: alpha
+
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  namespace: tweed
+  name:      broker
+  annotations:
+    kubernetes.io/ingress.class:    nginx
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+
+spec:
+  tls:
+    - hosts:
+        - tweed.starkandwayne.com
+      secretName: ingress-tls
+
+  rules:
+    - host: tweed.starkandwayne.com
+      http:
+        paths:
+          - path: /
+            backend:
+              serviceName: broker
+              servicePort: tweed
