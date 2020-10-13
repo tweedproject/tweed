@@ -1,4 +1,4 @@
-FROM golang:1.12 AS stage1
+FROM golang:1.13 AS stage1
 
 WORKDIR /go/src/github.com/tweedproject/tweed
 COPY . .
