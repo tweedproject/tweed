@@ -2,6 +2,7 @@ package tweed
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 
 	"code.cloudfoundry.org/lager"
@@ -24,11 +25,50 @@ type broker struct {
 }
 
 func (b broker) Services(ctx context.Context) ([]brokerapi.Service, error) {
-	panic("not implemented")
+	var services []brokerapi.Service
+	for _, s := range b.c.Config.Catalog.Services {
+		var dc brokerapi.Service
+		dc.Name = s.Name
+		dc.ID = s.ID
+		dc.Description = s.Description
+		dc.Tags = s.Tags
+		dc.Bindable = s.Bindable
+		dc.InstancesRetrievable = s.InstancesRetrievable
+		dc.BindingsRetrievable = s.BindingsRetrievable
+		dc.PlanUpdatable = s.PlanUpdateable
+		services = append(services, dc)
+	}
+	return services, nil
 }
 
 func (b broker) Provision(ctx context.Context, instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, error) {
-	panic("not implemented")
+	if err := ValidInstanceID(instanceID); err != nil {
+		return brokerapi.ProvisionedServiceSpec{}, err
+	}
+	plan, err := b.c.Config.Catalog.FindPlan(details.ServiceID, details.PlanID)
+	if err != nil {
+		return brokerapi.ProvisionedServiceSpec{}, err
+	}
+
+	var params map[string]interface{}
+	err = json.Unmarshal(details.RawParameters, &params)
+	if err != nil {
+		return brokerapi.ProvisionedServiceSpec{}, err
+	}
+
+	_, err = b.c.Provision(&Instance{
+		ID:             instanceID,
+		Plan:           plan,
+		Root:           b.c.Root,
+		Prefix:         b.c.Config.Prefix,
+		VaultPrefix:    b.c.Config.Vault.Prefix,
+		UserParameters: params,
+	})
+
+	return brokerapi.ProvisionedServiceSpec{
+		IsAsync:       true,
+		AlreadyExists: false,
+	}, err
 }
 
 func (b broker) Deprovision(ctx context.Context, instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
