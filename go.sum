@@ -1,3 +1,8 @@
+code.cloudfoundry.org/lager v1.1.0 h1:v0RELJ2jqTeF2DW7PNjZaaGlrXbVxJBVz3uLxdP3fuY=
+code.cloudfoundry.org/lager v2.0.0+incompatible/go.mod h1:O2sS7gKP3HM2iemG+EnwvyNQK7pTSC6Foi4QiMp9sSk=
+github.com/google/uuid v1.0.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/gorilla/mux v1.8.0 h1:i40aqfkR1h2SlN9hojwV5ZA91wcXFOvkdNIeFDP5koI=
+github.com/gorilla/mux v1.8.0/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=
 github.com/gorilla/websocket v1.4.1 h1:q7AeDBpnBk8AogcD4DSag/Ukw/KV+YhzLj2bP5HvKCM=
 github.com/gorilla/websocket v1.4.1/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/jhunt/go-ansi v0.0.0-20181127194324-5fd839f108b6 h1:qAlBkfBj+4aW68SdlhlAiWx+hy7vmchlcAZQRAJFhFI=
@@ -14,4 +19,9 @@ github.com/jhunt/go-table v0.0.0-20181127210244-68a841ca53dc h1:znV4/dwO+LmbQGSe
 github.com/jhunt/go-table v0.0.0-20181127210244-68a841ca53dc/go.mod h1:ws87Lzc/NsPhH1MRRNk2IBANVMHsaQws0NqstHrveaE=
 github.com/mattn/go-isatty v0.0.10 h1:qxFzApOv4WsAL965uUPIsXzAKCZxN2p9UqdhFS4ZW10=
 github.com/mattn/go-isatty v0.0.10/go.mod h1:qgIWMr58cqv1PHHyhnkY9lrL7etaEgOFcMEpPG5Rm84=
+github.com/pborman/uuid v1.2.1 h1:+ZZIw58t/ozdjRaXh/3awHfmWRbzYxJoAdNJxe/3pvw=
+github.com/pborman/uuid v1.2.1/go.mod h1:X/NO0urCmaxf9VXbdlT7C2Yzkj2IKimNn4k+gtPdI/k=
+github.com/pivotal-cf/brokerapi v1.0.0 h1:VXskMouDTRxtARiZ4ORLIZ6cxlzTSqfGa/yi2JLA+F0=
+github.com/pivotal-cf/brokerapi v6.4.2+incompatible/go.mod h1:P+oA8NvkCTkq2t4DohBiyqQo69Ub15RKGcm/vKNP0gg=
+github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 golang.org/x/sys v0.0.0-20191008105621-543471e840be/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
