@@ -3,6 +3,7 @@ package tweed
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"code.cloudfoundry.org/lager"
@@ -27,15 +28,28 @@ type broker struct {
 func (b broker) Services(ctx context.Context) ([]brokerapi.Service, error) {
 	var services []brokerapi.Service
 	for _, s := range b.c.Config.Catalog.Services {
-		var dc brokerapi.Service
-		dc.Name = s.Name
-		dc.ID = s.ID
-		dc.Description = s.Description
-		dc.Tags = s.Tags
-		dc.Bindable = s.Bindable
-		dc.InstancesRetrievable = s.InstancesRetrievable
-		dc.BindingsRetrievable = s.BindingsRetrievable
-		dc.PlanUpdatable = s.PlanUpdateable
+		var servicePlans []brokerapi.ServicePlan
+		for _, p := range s.Plans {
+			sp := brokerapi.ServicePlan{
+				ID:          p.ID,
+				Name:        p.Name,
+				Description: p.Description,
+				Free:        &p.Free,
+				Bindable:    &p.Bindable,
+			}
+			servicePlans = append(servicePlans, sp)
+		}
+		dc := brokerapi.Service{
+			Name:                 s.Name,
+			ID:                   s.ID,
+			Description:          s.Description,
+			Tags:                 s.Tags,
+			Bindable:             s.Bindable,
+			InstancesRetrievable: s.InstancesRetrievable,
+			BindingsRetrievable:  s.BindingsRetrievable,
+			PlanUpdatable:        s.PlanUpdateable,
+			Plans:                servicePlans,
+		}
 		services = append(services, dc)
 	}
 	return services, nil
@@ -72,11 +86,30 @@ func (b broker) Provision(ctx context.Context, instanceID string, details broker
 }
 
 func (b broker) Deprovision(ctx context.Context, instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
-	panic("not implemented")
+	_, gone, err := b.c.Deprovision(instanceID)
+	if err != nil {
+		return brokerapi.DeprovisionServiceSpec{}, err
+	}
+
+	if gone {
+		return brokerapi.DeprovisionServiceSpec{}, fmt.Errorf("service instance '%s' already deprovisioned", instanceID)
+	}
+
+	return brokerapi.DeprovisionServiceSpec{
+		IsAsync: true,
+	}, nil
 }
 
 func (b broker) GetInstance(ctx context.Context, instanceID string) (brokerapi.GetInstanceDetailsSpec, error) {
-	panic("not implemented")
+	inst, ok := b.c.instances[instanceID]
+	if !ok {
+		return brokerapi.GetInstanceDetailsSpec{}, fmt.Errorf("service instance '%s' not found", instanceID)
+	}
+
+	return brokerapi.GetInstanceDetailsSpec{
+		PlanID:     inst.Plan.ID,
+		Parameters: inst.UserParameters,
+	}, nil
 }
 
 func (b broker) Update(ctx context.Context, instanceID string, details brokerapi.UpdateDetails, asyncAllowed bool) (brokerapi.UpdateServiceSpec, error) {
@@ -88,11 +121,26 @@ func (b broker) LastOperation(ctx context.Context, instanceID string, details br
 }
 
 func (b broker) Bind(ctx context.Context, instanceID, bindingID string, details brokerapi.BindDetails, asyncAllowed bool) (brokerapi.Binding, error) {
-	panic("not implemented")
+	_, err := b.c.Bind(instanceID, bindingID)
+	if err != nil {
+		return brokerapi.Binding{}, fmt.Errorf("unable to bind service instance '%s': %s", instanceID, err)
+	}
+
+	return brokerapi.Binding{
+		IsAsync:       true,
+		AlreadyExists: false,
+	}, nil
 }
 
 func (b broker) Unbind(ctx context.Context, instanceID, bindingID string, details brokerapi.UnbindDetails, asyncAllowed bool) (brokerapi.UnbindSpec, error) {
-	panic("not implemented")
+	_, err := b.c.Unbind(instanceID, bindingID)
+	if err != nil {
+		return brokerapi.UnbindSpec{}, fmt.Errorf("unable to unbind service instance '%s': %s", instanceID, err)
+	}
+
+	return brokerapi.UnbindSpec{
+		IsAsync: true,
+	}, nil
 }
 
 func (b broker) GetBinding(ctx context.Context, instanceID, bindingID string) (brokerapi.GetBindingSpec, error) {
