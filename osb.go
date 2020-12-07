@@ -56,9 +56,10 @@ func (b broker) Services(ctx context.Context) ([]brokerapi.Service, error) {
 }
 
 func (b broker) Provision(ctx context.Context, instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, error) {
-	if err := ValidInstanceID(instanceID); err != nil {
-		return brokerapi.ProvisionedServiceSpec{}, err
-	}
+	// FIXME: Uncomment after prefixing is done
+	// if err := ValidInstanceID(instanceID); err != nil {
+	// 	return brokerapi.ProvisionedServiceSpec{}, err
+	// }
 	plan, err := b.c.Config.Catalog.FindPlan(details.ServiceID, details.PlanID)
 	if err != nil {
 		return brokerapi.ProvisionedServiceSpec{}, err
@@ -117,7 +118,20 @@ func (b broker) Update(ctx context.Context, instanceID string, details brokerapi
 }
 
 func (b broker) LastOperation(ctx context.Context, instanceID string, details brokerapi.PollDetails) (brokerapi.LastOperation, error) {
-	panic("not implemented")
+	inst, ok := b.c.instances[instanceID]
+	if !ok {
+		return brokerapi.LastOperation{State: brokerapi.Failed}, fmt.Errorf("service instance '%s' not found", instanceID)
+	}
+
+	if inst.State == "provisioning" || inst.State == "deprovisioning" || inst.State == "binding" || inst.State == "unbinding" {
+		return brokerapi.LastOperation{State: brokerapi.InProgress}, nil
+	}
+
+	if inst.State == "quiet" || inst.State == "gone" {
+		return brokerapi.LastOperation{State: brokerapi.Succeeded}, nil
+	}
+
+	return brokerapi.LastOperation{State: brokerapi.Failed}, fmt.Errorf("operation failed: %s", inst.State)
 }
 
 func (b broker) Bind(ctx context.Context, instanceID, bindingID string, details brokerapi.BindDetails, asyncAllowed bool) (brokerapi.Binding, error) {
@@ -148,5 +162,14 @@ func (b broker) GetBinding(ctx context.Context, instanceID, bindingID string) (b
 }
 
 func (b broker) LastBindingOperation(ctx context.Context, instanceID, bindingID string, details brokerapi.PollDetails) (brokerapi.LastOperation, error) {
-	panic("not implemented")
+	inst, ok := b.c.instances[instanceID]
+	if !ok {
+		return brokerapi.LastOperation{State: brokerapi.Failed}, fmt.Errorf("service instance '%s' not found", instanceID)
+	}
+
+	_, ok = inst.Bindings[bindingID]
+	if !ok {
+		return brokerapi.LastOperation{State: brokerapi.InProgress}, nil
+	}
+	return brokerapi.LastOperation{State: brokerapi.Succeeded}, nil
 }
