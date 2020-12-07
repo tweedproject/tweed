@@ -179,6 +179,9 @@ func (b broker) LastBindingOperation(ctx context.Context, instanceID, bindingID 
 
 	_, ok = inst.Bindings[bindingID]
 	if !ok {
+		if inst.State == "quiet" {
+			return brokerapi.LastOperation{State: brokerapi.Succeeded}, nil
+		}
 		return brokerapi.LastOperation{State: brokerapi.InProgress}, nil
 	}
 	return brokerapi.LastOperation{State: brokerapi.Succeeded}, nil
