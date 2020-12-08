@@ -115,7 +115,7 @@ func (b broker) GetInstance(ctx context.Context, instanceID string) (brokerapi.G
 }
 
 func (b broker) Update(ctx context.Context, instanceID string, details brokerapi.UpdateDetails, asyncAllowed bool) (brokerapi.UpdateServiceSpec, error) {
-	return brokerapi.UpdateServiceSpec, fmt.Errorf("the 'update' OSB API endpoint is not supported by this broker")
+	return brokerapi.UpdateServiceSpec{}, fmt.Errorf("the 'update' OSB API endpoint is not supported by this broker")
 }
 
 func (b broker) LastOperation(ctx context.Context, instanceID string, details brokerapi.PollDetails) (brokerapi.LastOperation, error) {
