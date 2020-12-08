@@ -43,7 +43,7 @@ instance_groups:
             version: "2.1"
             services:
               mysql:
-                image: (( concat "mysql:" tweed.ops.version || tweed.default.version ))
+                image: (( concat "mariadb:" tweed.ops.version || tweed.default.version ))
                 environment:
                   - (( concat "MYSQL_ROOT_PASSWORD=" tweed.creds.root.password ))
                 ports:

@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name:  mysql
-          image: (( concat "mysql:" tweed.ops.version || tweed.default.version ))
+          image: (( concat "mariadb:" tweed.ops.version || tweed.default.version ))
           ports:
             - name: mysql
               containerPort: 3306
