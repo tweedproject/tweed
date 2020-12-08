@@ -56,10 +56,10 @@ func (b broker) Services(ctx context.Context) ([]brokerapi.Service, error) {
 }
 
 func (b broker) Provision(ctx context.Context, instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, error) {
-	// FIXME: Uncomment after prefixing is done
-	// if err := ValidInstanceID(instanceID); err != nil {
-	// 	return brokerapi.ProvisionedServiceSpec{}, err
-	// }
+	if err := ValidInstanceID(instanceID); err != nil {
+		return brokerapi.ProvisionedServiceSpec{}, err
+	}
+
 	plan, err := b.c.Config.Catalog.FindPlan(details.ServiceID, details.PlanID)
 	if err != nil {
 		return brokerapi.ProvisionedServiceSpec{}, err
