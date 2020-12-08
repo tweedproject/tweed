@@ -17,7 +17,7 @@ func Purge(args []string) {
 		c.GET("/b/instances", &ls)
 
 		for _, inst := range ls {
-			if inst.State == "gone" {
+			if inst.IsGone() {
 				ids = append(ids, inst.ID)
 			}
 		}

@@ -3,6 +3,8 @@ package main
 import (
 	fmt "github.com/jhunt/go-ansi"
 	"os"
+
+	"github.com/tweedproject/tweed"
 )
 
 func Wait(args []string) {
@@ -21,25 +23,25 @@ func Wait(args []string) {
 	}
 
 	if opts.Wait.Instance && opts.Wait.State == "" {
-		opts.Wait.State = "quiet"
+		opts.Wait.State = tweed.QuietState
 	}
 	switch opts.Wait.State {
-	case "quiet":
-	case "provisioning":
-	case "binding":
-	case "unbinding":
-	case "deprovisioning":
-	case "gone":
+	case tweed.QuietState:
+	case tweed.ProvisioningState:
+	case tweed.BindingState:
+	case tweed.UnbindingState:
+	case tweed.DeprovisioningState:
+	case tweed.GoneState:
 
 	default:
 		fmt.Fprintf(os.Stderr, "@R{(error)} invalid @Y{--state '%s'}\n")
 		fmt.Fprintf(os.Stderr, "        only the following values are allowed:\n\n")
-		fmt.Fprintf(os.Stderr, "          - @W{quiet}           nothing is happening\n")
-		fmt.Fprintf(os.Stderr, "          - @W{provisioning}    new instance is being set up\n")
-		fmt.Fprintf(os.Stderr, "          - @W{binding}         new credentials are being bound\n")
-		fmt.Fprintf(os.Stderr, "          - @W{unbinding}       credentials are being unbound\n")
-		fmt.Fprintf(os.Stderr, "          - @W{deprovisioning}  instance is being torn down\n")
-		fmt.Fprintf(os.Stderr, "          - @W{gone}            instance deprovisioned\n")
+		fmt.Fprintf(os.Stderr, "          - @W{%s}           nothing is happening\n", tweed.QuietState)
+		fmt.Fprintf(os.Stderr, "          - @W{%s}    new instance is being set up\n", tweed.ProvisioningState)
+		fmt.Fprintf(os.Stderr, "          - @W{%s}         new credentials are being bound\n", tweed.BindingState)
+		fmt.Fprintf(os.Stderr, "          - @W{%s}       credentials are being unbound\n", tweed.UnbindingState)
+		fmt.Fprintf(os.Stderr, "          - @W{%s}  instance is being torn down\n", tweed.DeprovisioningState)
+		fmt.Fprintf(os.Stderr, "          - @W{%s}            instance deprovisioned\n", tweed.GoneState)
 		fmt.Fprintf(os.Stderr, "\n")
 		os.Exit(1)
 	}

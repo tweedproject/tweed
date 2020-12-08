@@ -8,6 +8,16 @@ import (
 	"strings"
 )
 
+const (
+	// don't forget to update the api/responses.go copies as well!
+	QuietState          = "quiet"
+	ProvisioningState   = "provisioning"
+	DeprovisioningState = "deprovisioning"
+	GoneState           = "gone"
+	BindingState        = "binding"
+	UnbindingState      = "unbinding"
+)
+
 type Instance struct {
 	ID    string
 	Plan  *Plan
@@ -79,7 +89,7 @@ func ParseInstance(cat Catalog, root string, b []byte) (Instance, error) {
 		Root:           root,
 		Plan:           p,
 		UserParameters: in.Tweed.User,
-		State:          "quiet",
+		State:          QuietState,
 	}
 	b, err = ioutil.ReadFile(inst.my("lifecycle/data/state"))
 	if err == nil {
@@ -185,11 +195,11 @@ func (i *Instance) Provision() (*task, error) {
 		return nil, err
 	}
 
-	return i.do("bin/provision", "", "provisioning", "quiet")
+	return i.do("bin/provision", "", ProvisioningState, QuietState)
 }
 
 func (i *Instance) Bind(id string) (*task, error) {
-	if i.State != "quiet" {
+	if i.State != QuietState {
 		return nil, fmt.Errorf("service instance '%s' is currently %s", i.ID, i.State)
 	}
 
@@ -197,7 +207,7 @@ func (i *Instance) Bind(id string) (*task, error) {
 		return nil, err
 	}
 
-	i.State = "binding"
+	i.State = BindingState
 	t := background(Exec{
 		Run: i.path("bin/bind"),
 		Env: i.env([]string{
@@ -205,7 +215,7 @@ func (i *Instance) Bind(id string) (*task, error) {
 			"OVERRIDES=" + i.CredentialOverrides(),
 		}),
 	}, func() {
-		i.State = "quiet"
+		i.State = QuietState
 		if err := i.LookupBinding(id); err != nil {
 			fmt.Fprintf(os.Stderr, "failed to look up newly-created binding %s/%s: %s", i.ID, id, err)
 		}
@@ -216,7 +226,7 @@ func (i *Instance) Bind(id string) (*task, error) {
 }
 
 func (i *Instance) Unbind(id string) (*task, error) {
-	if i.State != "quiet" {
+	if i.State != QuietState {
 		return nil, fmt.Errorf("service instance '%s' is currently %s", i.ID, i.State)
 	}
 
@@ -224,12 +234,12 @@ func (i *Instance) Unbind(id string) (*task, error) {
 		return nil, err
 	}
 
-	i.State = "unbinding"
+	i.State = UnbindingState
 	t := background(Exec{
 		Run: i.path("bin/unbind"),
 		Env: i.env([]string{"BINDING=" + id}),
 	}, func() {
-		i.State = "quiet"
+		i.State = QuietState
 		delete(i.Bindings, id)
 	})
 
@@ -242,11 +252,11 @@ func (i *Instance) Deprovision() (*task, error) {
 		return nil, err
 	}
 
-	return i.do("bin/deprovision", "quiet", "deprovisioning", "gone")
+	return i.do("bin/deprovision", QuietState, DeprovisioningState, GoneState)
 }
 
 func (i *Instance) Purge() error {
-	if i.State != "gone" {
+	if i.State != GoneState {
 		return fmt.Errorf("service instance '%s' is currently %s", i.ID, i.State)
 	}
 
@@ -291,4 +301,16 @@ func (i *Instance) Files() ([]File, error) {
 		Files []File `json:"files"`
 	}
 	return f.Files, json.Unmarshal(out, &f)
+}
+
+func (i Instance) IsBusy() bool {
+	return i.State == ProvisioningState || i.State == DeprovisioningState || i.State == BindingState || i.State == UnbindingState
+}
+
+func (i Instance) IsQuiet() bool {
+	return i.State == QuietState
+}
+
+func (i Instance) IsGone() bool {
+	return i.State == GoneState
 }

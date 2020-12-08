@@ -4,6 +4,15 @@ import (
 	"fmt"
 )
 
+const (
+	QuietState          = "quiet"
+	ProvisioningState   = "provisioning"
+	DeprovisioningState = "deprovisioning"
+	GoneState           = "gone"
+	BindingState        = "binding"
+	UnbindingState      = "unbinding"
+)
+
 type ErrorResponse struct {
 	Err string `json:"error"`
 	Ref string `json:"ref"`
@@ -65,6 +74,18 @@ type InstanceResponse struct {
 	Bindings map[string]map[string]interface{} `json:"bindings"`
 
 	Tasks []TaskResponse `json:"tasks"`
+}
+
+func (i InstanceResponse) IsBusy() bool {
+	return i.State == ProvisioningState || i.State == DeprovisioningState || i.State == BindingState || i.State == UnbindingState
+}
+
+func (i InstanceResponse) IsQuiet() bool {
+	return i.State == QuietState
+}
+
+func (i InstanceResponse) IsGone() bool {
+	return i.State == GoneState
 }
 
 type BindingsResponse struct {

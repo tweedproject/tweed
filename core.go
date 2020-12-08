@@ -71,7 +71,7 @@ func (c *Core) Scan() error {
 func (c *Core) Count(plan *Plan) int {
 	n := 0
 	for _, inst := range c.instances {
-		if inst.State != "gone" && plan.Same(inst.Plan) {
+		if !inst.IsGone() && plan.Same(inst.Plan) {
 			n++
 		}
 	}
@@ -85,7 +85,7 @@ func (c *Core) UpdateCatalogNumbers() {
 		}
 	}
 	for _, inst := range c.instances {
-		if inst.State != "gone" {
+		if !inst.IsGone() {
 			inst.Plan.Tweed.Provisioned++
 		}
 	}

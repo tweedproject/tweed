@@ -124,11 +124,11 @@ func (b broker) LastOperation(ctx context.Context, instanceID string, details br
 		return brokerapi.LastOperation{State: brokerapi.Failed}, fmt.Errorf("service instance '%s' not found", instanceID)
 	}
 
-	if inst.State == "provisioning" || inst.State == "deprovisioning" || inst.State == "binding" || inst.State == "unbinding" {
+	if inst.IsBusy() {
 		return brokerapi.LastOperation{State: brokerapi.InProgress}, nil
 	}
 
-	if inst.State == "quiet" || inst.State == "gone" {
+	if inst.IsQuiet() || inst.IsGone() {
 		return brokerapi.LastOperation{State: brokerapi.Succeeded}, nil
 	}
 
@@ -180,7 +180,7 @@ func (b broker) LastBindingOperation(ctx context.Context, instanceID, bindingID 
 
 	_, ok = inst.Bindings[bindingID]
 	if !ok {
-		if inst.State == "quiet" {
+		if inst.IsQuiet() {
 			return brokerapi.LastOperation{State: brokerapi.Succeeded}, nil
 		}
 		return brokerapi.LastOperation{State: brokerapi.InProgress}, nil

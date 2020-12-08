@@ -63,7 +63,7 @@ func (c *Core) Unbind(id, bid string) (string, error) {
 
 func (c *Core) Deprovision(id string) (string, bool, error) {
 	if inst, ok := c.instances[id]; ok {
-		if inst.State == "gone" {
+		if inst.IsGone() {
 			return "", true, nil
 		}
 		t, err := inst.Deprovision()
