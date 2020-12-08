@@ -163,12 +163,12 @@ func (b broker) GetBinding(ctx context.Context, instanceID, bindingID string) (b
 		return brokerapi.GetBindingSpec{}, fmt.Errorf("service instance '%s' not found", instanceID)
 	}
 
-	_, ok = inst.Bindings[bindingID]
+	binding, ok := inst.Bindings[bindingID]
 	if !ok {
 		return brokerapi.GetBindingSpec{}, fmt.Errorf("binding '%s' not found for service instance '%s'", bindingID, instanceID)
 	}
 
-	return brokerapi.GetBindingSpec{Credentials: inst.Plan.Tweed.Credentials}, nil
+	return brokerapi.GetBindingSpec{Credentials: binding}, nil
 }
 
 func (b broker) LastBindingOperation(ctx context.Context, instanceID, bindingID string, details brokerapi.PollDetails) (brokerapi.LastOperation, error) {
