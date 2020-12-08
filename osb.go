@@ -66,9 +66,10 @@ func (b broker) Provision(ctx context.Context, instanceID string, details broker
 	}
 
 	var params map[string]interface{}
-	err = json.Unmarshal(details.RawParameters, &params)
-	if err != nil {
-		return brokerapi.ProvisionedServiceSpec{}, err
+	if details.RawParameters != nil {
+		if err = json.Unmarshal(details.RawParameters, &params); err != nil {
+			return brokerapi.ProvisionedServiceSpec{}, err
+		}
 	}
 
 	_, err = b.c.Provision(&Instance{
