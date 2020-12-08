@@ -6,7 +6,7 @@ import (
 )
 
 func ValidInstanceID(id string) error {
-	if ok, _ := regexp.Match(`^[a-zA-Z][a-zA-Z-0-9-]{0,61}[a-zA-Z0-9]$`, []byte(id)); !ok {
+	if ok, _ := regexp.Match(`^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]$`, []byte(id)); !ok {
 		return fmt.Errorf("instance IDs must include only alphanumeric characters or hyphens, be less than 64 characters long, must start with a letter, and not end with a hyphen")
 	}
 	return nil

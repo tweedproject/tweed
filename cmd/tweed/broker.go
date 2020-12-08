@@ -116,5 +116,6 @@ func Broker(args []string) {
 
 	fmt.Fprintf(os.Stderr, "tweed broker API spinning up...\n")
 	http.Handle("/b/", core.API())
+	http.Handle("/v2/", core.OSB())
 	http.ListenAndServe(opts.Broker.Listen, nil)
 }
