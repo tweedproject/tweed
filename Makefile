@@ -15,10 +15,6 @@ docker:
 	docker build -t $(IMAGE):edge .
 	docker push $(IMAGE):edge
 
-osb:
-	docker build -t $(IMAGE):$@ .
-	docker push $(IMAGE):$@
-
 push:
 	@echo "Checking that VERSION was defined in the calling environment"
 	@test -n "$(VERSION)"
