@@ -1,4 +1,5 @@
 IMAGE ?= tweedproject/kernel
+TAG ?= edge
 NAMESPACE ?= tweed
 
 VERSION ?=
@@ -12,8 +13,8 @@ default:
 	go build -ldflags="$(LDFLAGS)" ./cmd/tweed
 
 docker:
-	docker build -t $(IMAGE):edge .
-	docker push $(IMAGE):edge
+	docker build -t $(IMAGE):$(TAG) .
+	docker push $(IMAGE):$(TAG)
 
 push:
 	@echo "Checking that VERSION was defined in the calling environment"
