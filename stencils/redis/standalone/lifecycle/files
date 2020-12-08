@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 set -eu
 
 (
@@ -23,4 +23,5 @@ if [[ $INFRASTRUCTURE_TYPE = 'bosh' && -f out/manifest.yml ]]; then
       The BOSH Deployment Manifest yaml that was used to deploy this
       service (complete with credentials, OS version, etc.)
 EOF
+fi
 ) | spruce merge

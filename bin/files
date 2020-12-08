@@ -1,4 +1,35 @@
 #!/bin/bash
 set -eu
+exec 2>> $WORKSPACE/log
+trap 'echo >&2 "EXITING $?"' INT TERM QUIT EXIT
+
+cat >&2 <<EOF
+
+$(date) :: tweed
+---------------------------------------------
+
+   ######## #### ##       ########  ######
+   ##        ##  ##       ##       ##    ##
+   ##        ##  ##       ##       ##
+   ######    ##  ##       ######    ######
+   ##        ##  ##       ##             ##
+   ##        ##  ##       ##       ##    ##
+   ##       #### ######## ########  ######
+
+---------------------------------------------
+
+EOF
+
+export INFRASTRUCTURE_TYPE=$(cat $INFRASTRUCTURE.type)
+echo >&2 "infrastructure: $INFRASTRUCTURE ($INFRASTRUCTURE_TYPE)"
+echo >&2 "stencil:        $STENCIL"
+echo >&2 "$WORKSPACE>"
+echo >&2
+
 cd $WORKSPACE
 ./lifecycle/files | spruce json
+
+echo >&2
+echo >&2 "files gathered."
+echo >&2 "FILES COMPLETE."
+exit 0
