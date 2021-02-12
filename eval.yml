@@ -87,6 +87,7 @@ data:
           plans:
             - name: v9
               id:   v9
+              bindable: true
               description: |
                 PostgreSQL version 9.x
               tweed:
@@ -101,6 +102,7 @@ data:
 
             - name: v10
               id:   v10
+              bindable: true
               description: |
                 PostgreSQL version 10.x
               tweed:
@@ -115,6 +117,7 @@ data:
 
             - name: v11
               id:   v11
+              bindable: true
               description: |
                 PostgreSQL version 11.x
               tweed:
