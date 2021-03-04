@@ -56,6 +56,10 @@ func (b broker) Services(ctx context.Context) ([]brokerapi.Service, error) {
 }
 
 func (b broker) Provision(ctx context.Context, instanceID string, details brokerapi.ProvisionDetails, asyncAllowed bool) (brokerapi.ProvisionedServiceSpec, error) {
+	if !asyncAllowed {
+		return brokerapi.ProvisionedServiceSpec{}, brokerapi.ErrAsyncRequired
+	}
+
 	if err := ValidInstanceID(instanceID); err != nil {
 		return brokerapi.ProvisionedServiceSpec{}, err
 	}
@@ -88,6 +92,10 @@ func (b broker) Provision(ctx context.Context, instanceID string, details broker
 }
 
 func (b broker) Deprovision(ctx context.Context, instanceID string, details brokerapi.DeprovisionDetails, asyncAllowed bool) (brokerapi.DeprovisionServiceSpec, error) {
+	if !asyncAllowed {
+		return brokerapi.DeprovisionServiceSpec{}, brokerapi.ErrAsyncRequired
+	}
+
 	_, gone, err := b.c.Deprovision(instanceID)
 	if err != nil {
 		return brokerapi.DeprovisionServiceSpec{}, err
