@@ -1,15 +1,37 @@
 #!/bin/bash
 set -eu
 
-export TWEED_CONFIG_FILE=/tweed/etc/config.json
-export TWEED_ROOT=${TWEED_ROOT:-/tweed}
+echo Starting Tweed Setup
+
+export TWEED_RO_CONFIG_FILE=/tweed-provided/tweed.yml
+export TWEED_RO_CATALOG_FILE=/tweed-provided/catalog.yml
+
+export TWEED_DATA_DIRECTORY=/tweed
+export TWEED_PVC_DIRECTORY=/tweed/etc/config.d
+
+export TWEED_CONFIG_FILE=${TWEED_DATA_DIRECTORY}/etc/config.d/config.json
+export TWEED_ROOT=${TWEED_ROOT:-$TWEED_DATA_DIRECTORY}
 export HOME=$TWEED_ROOT
 
-mkdir -p /tweed/etc/config.d
+echo TWEED_RO_CONFIG_FILE: ${TWEED_RO_CONFIG_FILE}
+echo TWEED_CONFIG_FILE:    ${TWEED_CONFIG_FILE}
+echo TWEED_DATA_DIRECTORY: ${TWEED_DATA_DIRECTORY}
+echo TWEED_ROOT:           ${TWEED_ROOT}
+echo HOME:                 ${HOME}
+echo TWEED_CONFIG_MOUNT:   ${TWEED_CONFIG_MOUNT}
+
+echo Copying files from configMap
+ls -la /tweed-provided
+
+mkdir -p ${TWEED_PVC_DIRECTORY}/provided/
+cp -v ${TWEED_RO_CONFIG_FILE}  ${TWEED_DATA_DIRECTORY}/etc/config.d/provided/tweed.yml
+cp -v ${TWEED_RO_CATALOG_FILE} ${TWEED_DATA_DIRECTORY}/etc/config.d/provided/catalog.yml
+
+mkdir -p ${TWEED_DATA_DIRECTORY}/etc/config.d
 if [[ ${INIT_VAULT:-} != "" ]]; then
 	safe target the-vault $INIT_VAULT --no-strongbox
 	TOKEN=$(safe init --keys 1 --json | jq -r '.root_token')
-	cat >/tweed/etc/config.d/auto.vault.yml <<EOF
+	cat >${TWEED_DATA_DIRECTORY}/etc/config.d/auto.vault.yml <<EOF
 ---
 vault:
   url:    $INIT_VAULT
@@ -19,7 +41,7 @@ EOF
 fi
 
 if [[ -n ${TWEED_CONFIG:-} ]]; then
-	cat >/tweed/etc/config.d/auto.yml <<EOF
+	cat >${TWEED_DATA_DIRECTORY}/etc/config.d/auto.yml <<EOF
 $TWEED_CONFIG
 EOF
 	unset TWEED_CONFIG
@@ -56,7 +78,7 @@ contexts:
       user: tweed
 EOF
 
-	cat <<EOF | spruce merge >/tweed/etc/config.d/auto.k8s.yml
+	cat <<EOF | spruce merge >${TWEED_DATA_DIRECTORY}/etc/config.d/auto.k8s.yml
 infrastructures:
   $KUBERNETES_INFRASTRUCTURE_NAME:
     type: kubernetes
@@ -64,9 +86,10 @@ infrastructures:
 EOF
 fi
 
-find /tweed/etc/config.d -type f -name '*.yml' | sort | \
+find ${TWEED_DATA_DIRECTORY}/etc/config.d -type f -name '*.yml' | sort | \
 	xargs spruce merge --skip-eval | \
 	spruce json > $TWEED_CONFIG_FILE
 
 env | grep TWEED_
 exec /usr/bin/tweed broker
+

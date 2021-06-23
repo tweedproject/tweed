@@ -53,7 +53,7 @@ data:
       "disable_mlock": 1,
       "backend": {
         "file": {
-          "path": "/vault/file"
+          "path": "/vault/data/file"
         }
       },
       "listener": {
@@ -84,6 +84,8 @@ data:
             A standalone, single-node PostgreSQL RDBMS
           metadata: {}
           tags: [postgres, psql, pg, shared]
+          bindings_retrievable: true
+          instances_retrievable: true
           plans:
             - name: v9
               id:   v9
@@ -129,6 +131,60 @@ data:
                 credentials:
                   version: 11
                   tryit: (( concat "PGPASSWORD=" credentials.password " psql -h " credentials.host " -p " credentials.port " -U " credentials.username " " credentials.database ))
+            - name: v12
+              id:   v12
+              bindable: true
+              description: |
+                PostgreSQL version 12.x
+              tweed:
+                infrastructure: k8s
+                stencil:  postgres/standalone
+                limit: 1
+                config:
+                  version: '12'
+                credentials:
+                  version: 12
+                  tryit: (( concat "PGPASSWORD=" credentials.password " psql -h " credentials.host " -p " credentials.port " -U " credentials.username " " credentials.database ))
+
+            - name: v13
+              id:   v13
+              bindable: true
+              description: |
+                PostgreSQL version 13.x
+              tweed:
+                infrastructure: k8s
+                stencil:  postgres/standalone
+                limit: 1
+                config:
+                  version: '13'
+                credentials:
+                  version: 13
+                  tryit: (( concat "PGPASSWORD=" credentials.password " psql -h " credentials.host " -p " credentials.port " -U " credentials.username " " credentials.database ))
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name:      vault-pv
+  namespace: tweed
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 500Mi
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name:      tweed-pv
+  namespace: tweed
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 500Mi
+
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -168,9 +224,13 @@ spec:
           volumeMounts:
             - name: vault
               mountPath: /vault/config
+            - name: vault-data
+              mountPath: /vault/data
+              readOnly: false
+
 
         - name:  broker
-          image: tweedproject/kernel:edge
+          image: tweedproject/kernel:broker
           imagePullPolicy: Always
           env:
             - name:  INIT_VAULT
@@ -182,6 +242,9 @@ spec:
               value: ':8080'
             - name:  TWEED_URL
               value: http://127.0.0.1:8080
+
+            - name:  TWEED_CONFIG_MOUNT
+              value: /tweed-provided
 
             - name: TWEED_HTTP_USERNAME
               valueFrom:
@@ -207,7 +270,10 @@ spec:
 
           volumeMounts:
             - name: tweed
-              mountPath: /tweed/etc/config.d/provided
+              mountPath: /tweed-provided
+            - name: tweed-data
+              mountPath: /tweed/etc/config.d
+              readOnly: false
 
       volumes:
         - name: tweed
@@ -216,6 +282,13 @@ spec:
         - name: vault
           configMap:
             name: vault
+        - name: tweed-data
+          persistentVolumeClaim:
+            claimName: tweed-pv
+        - name: vault-data
+          persistentVolumeClaim:
+            claimName: vault-pv
+
 ---
 apiVersion: v1
 kind: Service
@@ -235,7 +308,7 @@ spec:
     app:     tweed
 
 ---
-apiVersion: networking.k8s.io/v1beta1
+apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   namespace: tweed
@@ -255,6 +328,10 @@ spec:
       http:
         paths:
           - path: /
+            pathType: Prefix
             backend:
-              serviceName: broker
-              servicePort: tweed
+              service:
+                name: broker
+                port:
+                  name: tweed
+
